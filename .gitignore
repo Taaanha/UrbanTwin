@@ -1,0 +1,25 @@
+# Secrets
+.env
+backend/.env
+
+# Python
+.venv/
+backend/.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+frontend/dist/
+
+# Uploads and large data
+backend/uploads/
+datasets/raw/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
