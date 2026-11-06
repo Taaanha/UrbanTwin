@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets and local settings
+.env
+
+# Node
+node_modules/
+dist/
+
+# Uploaded files and large data
+backend/uploads/
+datasets/raw/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
