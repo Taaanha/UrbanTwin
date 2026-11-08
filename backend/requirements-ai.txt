@@ -1,0 +1,4 @@
+# Optional: pretrained image embeddings for duplicate detection (CPU is fine, no training).
+# Install CPU-only torch first on Windows:  pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch
+transformers
