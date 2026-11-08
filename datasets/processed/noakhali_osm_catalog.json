@@ -1,0 +1,23 @@
+{
+  "place": "Noakhali Paurashava / Maijdee (study envelope)",
+  "crs": "EPSG:4326",
+  "license": "ODbL 1.0",
+  "acquired_at": "2026-11-06T17:08:21.074869+00:00",
+  "bbox": {
+    "west": 91.075,
+    "south": 22.847,
+    "east": 91.123,
+    "north": 22.891
+  },
+  "counts": {
+    "roads": 442,
+    "buildings": 5711,
+    "water_bodies": 420,
+    "drains": 0
+  },
+  "limitations": [
+    "No official Paurashava polygon in OSM at import time.",
+    "Wards are a labelled demonstration grid.",
+    "OSM is volunteered data and is incomplete."
+  ]
+}
