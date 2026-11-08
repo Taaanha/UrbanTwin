@@ -13,6 +13,20 @@ class Settings(BaseSettings):
     app_name: str = "UrbanTwin API"
     database_url: str
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    upload_dir: str = "uploads"
+    # Shared staff token for the government dashboard. Empty = auth disabled (lab only).
+    staff_token: str = ""
+    # Pretrained image model for duplicate checks. "none" = always use the average hash.
+    embedding_model: str = "facebook/dinov2-small"
+    # Optional hosted "AI second opinion" providers. Empty key = provider unavailable.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"  # check Google's current model list; names change
+    hf_api_token: str = ""
+    hf_detection_model: str = ""  # you must choose an object-detection model id; no default is assumed
+    hf_api_url: str = "https://api-inference.huggingface.co/models/{model}"
+    ai_timeout_seconds: float = 30.0
+    # Create tables on startup. Prefer `alembic upgrade head`; this is a dev convenience.
+    auto_create_tables: bool = False
 
     model_config = SettingsConfigDict(
         env_file=(BACKEND_DIR / ".env", PROJECT_DIR / ".env"),
