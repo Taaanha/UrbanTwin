@@ -54,8 +54,8 @@ def test_quality_counts_reviewed_reports_and_building_height_estimates():
 
 
 def test_timelapse_returns_dated_points_inside_the_window_only():
-    old = submit_report(client, "Old report", **WEST)
-    new = submit_report(client, "New report", **EAST)
+    old = submit_report(client, "Old report here", **WEST)
+    new = submit_report(client, "New report here", **EAST)
     _age(old["tracking_id"], 45)
     body = client.get("/api/insights/timelapse", params={"days": 30}).json()
     ids = [i["tracking_id"] for i in body["items"]]
@@ -67,9 +67,9 @@ def test_timelapse_returns_dated_points_inside_the_window_only():
 
 def test_ask_top_ward_shows_its_query_and_filters():
     for _ in range(3):
-        submit_report(client, "Drain blocked", category="blocked_drainage", **WEST)
-    submit_report(client, "Drain blocked", category="blocked_drainage", **EAST)
-    submit_report(client, "Pothole", category="pothole", **EAST)
+        submit_report(client, "Drain blocked here", category="blocked_drainage", **WEST)
+    submit_report(client, "Drain blocked here", category="blocked_drainage", **EAST)
+    submit_report(client, "Pothole in the road", category="pothole", **EAST)
     body = client.post("/api/insights/ask", json={"question": "Which ward has the most unresolved drain reports?"}).json()
     assert body["understood"] is True and body["intent"] == "top_wards"
     assert body["filters"]["categories"] == ["blocked_drainage"] and body["filters"]["unresolved"] is True
@@ -81,7 +81,7 @@ def test_ask_top_ward_shows_its_query_and_filters():
 
 
 def test_ask_counts_with_severity_and_time_window():
-    old = submit_report(client, "old", severity="critical", **WEST)
+    old = submit_report(client, "old critical one", severity="critical", **WEST)
     submit_report(client, "recent critical", severity="critical", **WEST)
     submit_report(client, "recent low", severity="low", **WEST)
     _age(old["tracking_id"], 10)
@@ -100,7 +100,7 @@ def test_ask_refuses_to_guess_and_is_not_injectable():
 
 def test_alerts_only_report_high_severity_newer_than_the_marker():
     start = client.get("/api/insights/alerts").json()["latest_id"]
-    submit_report(client, "minor", severity="low", **WEST)
+    submit_report(client, "minor problem", severity="low", **WEST)
     hot = submit_report(client, "dangerous hole", severity="critical", **WEST)
     body = client.get("/api/insights/alerts", params={"since_id": start}).json()
     assert [i["tracking_id"] for i in body["items"]] == [hot["tracking_id"]]
