@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+frontend/dist
+frontend/test-results
+backend/uploads
+backend/data
+backend/.env
+.env
+datasets/raw
+datasets/test_photos

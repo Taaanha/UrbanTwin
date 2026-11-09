@@ -16,6 +16,7 @@ from app.api.simulation import router as simulation_router
 from app.auth import auth_enabled
 from app.config import get_settings
 from app.database import check_database, init_db
+from app.spa import mount_frontend
 
 settings = get_settings()
 
@@ -71,3 +72,7 @@ def health_check():
             "database": "error",
             "detail": str(exc.__cause__ or exc),
         }
+
+
+# Last on purpose: the catch-all must come after every API route.
+mount_frontend(app, settings.frontend_dist)

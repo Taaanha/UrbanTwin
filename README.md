@@ -84,3 +84,7 @@ Interactive docs: http://127.0.0.1:8000/docs . Public: `POST /api/reports`, `GET
 ## Security notes
 
 Never commit `backend/.env`. Uploads are limited to JPEG/PNG/WebP by file signature (not file name), 5 MB each, 3 per report, stored under random names. The staff token is a single shared lab credential: fine for a demonstration, replace with per-user accounts (and HTTPS) before any real deployment.
+
+## Deployment
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md): one Docker image (app + API) plus a hosted PostGIS database; `render.yaml` is included.

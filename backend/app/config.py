@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -29,6 +30,8 @@ class Settings(BaseSettings):
     hf_model: str = "Qwen/Qwen2.5-VL-3B-Instruct"  # a vision-language model offered by Hugging Face Inference Providers; change with HF_MODEL in .env
     hf_api_url: str = "https://router.huggingface.co/v1"
     ai_timeout_seconds: float = 30.0
+    # Folder with the built frontend (frontend/dist). Set in the Docker image so one server serves app + API. Empty = API only.
+    frontend_dist: str = ""
     # Create tables on startup. Prefer `alembic upgrade head`; this is a dev convenience.
     auto_create_tables: bool = False
 
@@ -37,6 +40,15 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("database_url")
+    @classmethod
+    def _driver_prefix(cls, value: str) -> str:
+        """Hosted databases give postgres:// or postgresql:// URLs; this app uses the psycopg 3 driver."""
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value[len(prefix) :]
+        return value
 
     @property
     def cors_origin_list(self) -> list[str]:
