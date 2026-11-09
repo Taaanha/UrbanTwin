@@ -44,7 +44,7 @@ The code is already in `backend/app/services/image_embedding.py` and is tested o
 The code (`backend/app/services/ai_opinion.py`, route `POST /api/investigator/reports/{id}/ai-opinion`) was only tested with mocked responses, because the cloud sandbox could not reach Google or Hugging Face.
 
 ```
-1. Put GEMINI_API_KEY (and optionally HF_API_TOKEN + HF_DETECTION_MODEL) in backend\.env.
+1. Put GEMINI_API_KEY (and optionally HF_API_TOKEN for a Hugging Face vision model, or OLLAMA_URL + OLLAMA_MODEL for a local one) in backend\.env.
    I will choose the Hugging Face model: first tell me which object-detection models are
    currently available on the HF Inference API, their licences, and whether any is trained
    on road damage. Do not pick one without telling me. Also check the current Gemini model

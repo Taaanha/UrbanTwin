@@ -20,10 +20,14 @@ class Settings(BaseSettings):
     embedding_model: str = "facebook/dinov2-small"
     # Optional hosted "AI second opinion" providers. Empty key = provider unavailable.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"  # check Google's current model list; names change
+    gemini_model: str = "gemini-3.5-flash"  # must appear in `python -m scripts.list_gemini_models`; names change, override with GEMINI_MODEL in .env
+    # Optional local model through Ollama (https://ollama.com). Off unless both are set, e.g. OLLAMA_URL=http://localhost:11434 and a vision model you pulled.
+    ollama_url: str = ""
+    ollama_model: str = ""
+    ollama_timeout_seconds: float = 180.0  # local models can be slow on CPU
     hf_api_token: str = ""
-    hf_detection_model: str = ""  # you must choose an object-detection model id; no default is assumed
-    hf_api_url: str = "https://api-inference.huggingface.co/models/{model}"
+    hf_model: str = "Qwen/Qwen2.5-VL-3B-Instruct"  # a vision-language model offered by Hugging Face Inference Providers; change with HF_MODEL in .env
+    hf_api_url: str = "https://router.huggingface.co/v1"
     ai_timeout_seconds: float = 30.0
     # Create tables on startup. Prefer `alembic upgrade head`; this is a dev convenience.
     auto_create_tables: bool = False

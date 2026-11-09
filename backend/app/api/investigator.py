@@ -252,8 +252,8 @@ def ai_second_opinion(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Staff-triggered. Sends ONE re-encoded photo to the chosen provider. Changes nothing else."""
-    if body.provider not in ai_opinion.PROVIDERS:
-        raise HTTPException(status_code=400, detail="provider must be gemini or huggingface.")
+    if body.provider != ai_opinion.AUTO and body.provider not in ai_opinion.PROVIDERS:
+        raise HTTPException(status_code=400, detail="provider must be auto, gemini, ollama or huggingface.")
     report = db.scalar(
         select(Report).options(selectinload(Report.evidence)).where(Report.tracking_id == tracking_id)
     )
@@ -275,8 +275,15 @@ def ai_second_opinion(
         action="ai.second_opinion",
         entity_type="report",
         entity_id=report.tracking_id,
-        detail={k: result[k] for k in ("provider", "model", "is_problem", "category", "severity", "confidence")},
-        note="Photo (EXIF removed) was sent to a third-party AI service.",
+        detail={
+            **{k: result[k] for k in ("provider", "model", "is_problem", "category", "severity", "confidence")},
+            **({"fallback_from": result["fallback_from"]} if result.get("fallback_from") else {}),
+        },
+        note=(
+            "Photo (EXIF removed) was processed by a local model on this machine."
+            if result.get("local")
+            else "Photo (EXIF removed) was sent to a third-party AI service."
+        ),
     )
     db.commit()
     return result
