@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.accountability import router as accountability_router
 from app.api.geo import router as geo_router
+from app.api.insights import router as insights_router
 from app.api.intelligence import router as intelligence_router
 from app.api.investigator import router as investigator_router
 from app.api.planner import router as planner_router
@@ -49,6 +50,7 @@ app.include_router(planner_router)
 app.include_router(accountability_router)
 app.include_router(overview_router)
 app.include_router(simulation_router)
+app.include_router(insights_router)
 
 
 @app.get("/api/health")

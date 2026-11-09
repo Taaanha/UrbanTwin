@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -20,6 +21,27 @@ router = APIRouter(prefix="/api", tags=["overview"], dependencies=[Depends(requi
 def _counts(db: Session, column) -> dict[str, int]:
     rows = db.execute(select(column, func.count()).group_by(column)).all()
     return {str(key): int(count) for key, count in rows}
+
+
+TIMELINE_DAYS = 30
+
+
+def _timeline(db: Session) -> list[dict[str, Any]]:
+    """Reports received per calendar day (UTC) for the last 30 days, zero-filled. Real counts only."""
+    today = datetime.now(timezone.utc).date()
+    start = today - timedelta(days=TIMELINE_DAYS - 1)
+    day = func.date(func.timezone("UTC", Report.created_at))
+    rows = db.execute(select(day, func.count()).where(day >= start).group_by(day)).all()
+    counts = {str(d): int(c) for d, c in rows}
+    return [
+        {"date": str(start + timedelta(days=i)), "count": counts.get(str(start + timedelta(days=i)), 0)}
+        for i in range(TIMELINE_DAYS)
+    ]
+
+
+def _matrix(db: Session) -> list[dict[str, Any]]:
+    rows = db.execute(select(Report.category, Report.severity, func.count()).group_by(Report.category, Report.severity)).all()
+    return [{"category": c, "severity": s, "count": int(n)} for c, s, n in rows]
 
 
 @router.get("/overview")
@@ -54,6 +76,15 @@ def overview(db: Session = Depends(get_db)) -> dict[str, Any]:
             "by_status": _counts(db, Project.status),
             "approved_budget_bdt": round(sum(p.approved_budget_bdt for p in projects), 2),
         },
+        "timeline": _timeline(db),
+        "matrix": _matrix(db),
+        "funnel": [
+            {"stage": "Citizen reports", "count": db.scalar(select(func.count()).select_from(Report)) or 0},
+            {"stage": "Verified issues", "count": db.scalar(select(func.count()).select_from(Issue)) or 0},
+            {"stage": "Planned interventions", "count": db.scalar(select(func.count()).select_from(Intervention)) or 0},
+            {"stage": "Projects", "count": len(projects)},
+            {"stage": "Completed", "count": sum(1 for p in projects if p.status == "completed")},
+        ],
         "audit_entries": db.scalar(select(func.count()).select_from(AuditLog)) or 0,
     }
 

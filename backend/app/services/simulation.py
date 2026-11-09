@@ -9,6 +9,7 @@ from math import cos, pi, radians, sqrt
 from typing import Any
 
 import numpy as np
+import shapely
 from shapely import wkb
 from shapely.geometry import Point
 from shapely.ops import transform, unary_union
@@ -66,16 +67,14 @@ def load_layers(db: Session) -> Layers:
         wards.append({"id": ward_id, "name": name, "number": number, "poly": poly, "prep": prep(poly)})
 
     rows = db.execute(
-        select(func.ST_X(func.ST_Centroid(Building.geom)), func.ST_Y(func.ST_Centroid(Building.geom)))
+        select(func.ST_X(func.ST_Centroid(Building.geom)), func.ST_Y(func.ST_Centroid(Building.geom))).order_by(Building.id)
     ).all()
     coords = np.array([to_m(float(x), float(y)) for x, y in rows], dtype=float) if rows else np.zeros((0, 2))
     building_ward = np.full(len(coords), -1, dtype=int)
-    for i, (x, y) in enumerate(coords):
-        point = Point(x, y)
-        for j, ward in enumerate(wards):
-            if ward["prep"].contains(point):
-                building_ward[i] = j
-                break
+    for j, ward in enumerate(wards):  # first matching ward wins, as before
+        if len(coords):
+            hit = shapely.contains_xy(ward["poly"], coords[:, 0], coords[:, 1]) & (building_ward == -1)
+            building_ward[hit] = j
 
     greens = []
     demo_flags = []
@@ -94,11 +93,10 @@ def _disc(x: float, y: float, trees: int):
 
 
 def _metrics(layers: Layers, green_union, access_radius: float) -> dict[str, Any]:
-    zone = prep(green_union.buffer(access_radius)) if green_union is not None and not green_union.is_empty else None
+    zone = green_union.buffer(access_radius) if green_union is not None and not green_union.is_empty else None
     covered = np.zeros(len(layers.centroids), dtype=bool)
-    if zone is not None:
-        for i, (x, y) in enumerate(layers.centroids):
-            covered[i] = zone.contains(Point(x, y))
+    if zone is not None and len(layers.centroids):
+        covered = np.asarray(shapely.contains_xy(zone, layers.centroids[:, 0], layers.centroids[:, 1]), dtype=bool)
     per_ward = []
     for j, ward in enumerate(layers.wards):
         mask = layers.building_ward == j
@@ -202,6 +200,49 @@ def tree_rate(db: Session) -> tuple[float | None, str]:
     return row.amount_bdt, "Lab placeholder rate from City Planner, not an official price."
 
 
+RADIUS_FACTORS = (0.75, 1.0, 1.25)  # walking routes are longer than straight lines; a few metres of slack the other way
+
+
+def _sensitivity(layers: Layers, discs, radius: float) -> dict[str, Any]:
+    """Re-run the same coverage rule at other access distances to show how much the answer depends on that assumption."""
+    rows = []
+    for factor in RADIUS_FACTORS:
+        r = radius * factor
+        before = _metrics(layers, _green_union(layers), r)["city"]["access_pct"]
+        after = _metrics(layers, _green_union(layers, discs), r)["city"]["access_pct"]
+        rows.append(
+            {
+                "factor": factor,
+                "access_radius_m": round(r),
+                "access_before_pct": before,
+                "access_after_pct": after,
+                "gain_points": round(after - before, 1) if before is not None and after is not None else None,
+            }
+        )
+    afters = [r["access_after_pct"] for r in rows if r["access_after_pct"] is not None]
+    gains = [r["gain_points"] for r in rows if r["gain_points"] is not None]
+    central = next((r for r in rows if r["factor"] == 1.0), None)
+    return {
+        "basis": (
+            "Same coverage rule re-run with the access distance scaled by 0.75x, 1x and 1.25x, "
+            "because the straight-line distance used here understates real walking distance."
+        ),
+        "access_after_pct": {
+            "low": min(afters) if afters else None,
+            "central": central["access_after_pct"] if central else None,
+            "high": max(afters) if afters else None,
+        },
+        "gain_points": {"low": min(gains) if gains else None, "high": max(gains) if gains else None},
+        "rows": rows,
+        "not_modelled": [
+            "Tree survival and canopy growth",
+            "Whether a proposed site is actually available land",
+            "Walking routes, walls, ponds and roads",
+            "Errors in the building and green-space layers themselves",
+        ],
+    }
+
+
 def run_green_scenario(
     db: Session,
     *,
@@ -227,6 +268,7 @@ def run_green_scenario(
 
     discs = [_disc(s["x"], s["y"], trees_per_site) for s in chosen]
     after = _metrics(layers, _green_union(layers, discs), access_radius)
+    uncertainty = _sensitivity(layers, discs, access_radius)
 
     site_rows = []
     for s in chosen:
@@ -255,6 +297,7 @@ def run_green_scenario(
         "disclaimer": DISCLAIMER,
         "strategy": strategy,
         "sites": site_rows,
+        "canopy_radius_m": CANOPY_RADIUS_M,
         "total_trees": total_trees,
         "indicative_planting_cost_bdt": round(total_trees * rate, 2) if rate is not None else None,
         "cost_note": rate_note,
@@ -266,6 +309,7 @@ def run_green_scenario(
             else None
         ),
         "wards": wards,
+        "uncertainty": uncertainty,
         "data_warning": None if layers.greens else "No green-space polygons loaded; baseline coverage is zero by default.",
         "green_is_demo": layers.green_is_demo,
     }
@@ -287,3 +331,39 @@ def run_green_scenario(
     db.add(scenario)
     db.flush()
     return scenario
+
+
+def scenario_buildings(db: Session, scenario: Scenario) -> dict[str, Any]:
+    """Building footprints with whether each is within reach of green space before and after the scenario.
+
+    Recomputed from the stored sites with the same rules as the run, so the counts match the saved result.
+    """
+    from geoalchemy2.shape import to_shape
+    from shapely.geometry import mapping
+
+    from app.building_height import building_height
+
+    layers = load_layers(db)
+    params = scenario.params
+    radius = float(params["access_radius_m"])
+    trees = int(params["trees_per_site"])
+    discs = [_disc(*to_m(s["longitude"], s["latitude"]), trees) for s in scenario.result["sites"]]
+    before = _metrics(layers, _green_union(layers), radius)["_covered"]
+    after = _metrics(layers, _green_union(layers, discs), radius)["_covered"]
+    rows = db.execute(select(Building.geom, Building.properties).order_by(Building.id)).all()
+    features = []
+    for i, (geom, props) in enumerate(rows):
+        height, source = building_height(props)
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": mapping(to_shape(geom)),
+                "properties": {
+                    "height_m": height,
+                    "height_source": source,
+                    "access_before": bool(before[i]),
+                    "access_after": bool(after[i]),
+                },
+            }
+        )
+    return {"type": "FeatureCollection", "features": features}

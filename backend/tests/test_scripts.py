@@ -32,6 +32,11 @@ def test_demo_seed_labels_everything_and_connects_the_modules():
         assert db.scalar(select(func.count()).select_from(Issue).where(Issue.is_demo.is_(False))) == 0
     over = client.get("/api/overview").json()
     assert over["reports"]["demo"] == over["reports"]["total"] > 0
+    assert len(over["timeline"]) == 30
+    assert sum(d["count"] for d in over["timeline"]) <= over["reports"]["total"]
+    assert sum(m["count"] for m in over["matrix"]) == over["reports"]["total"]
+    assert [f["stage"] for f in over["funnel"]][0] == "Citizen reports"
+    assert over["funnel"][0]["count"] == over["reports"]["total"]
     flagged = [i for i in client.get("/api/accountability/recurrence").json()["items"] if i["review_flag"] != "none"]
     assert flagged, "seed should include a completed repair followed by a related issue"
     assert client.get("/api/geo/drains").json()["features"], "demo drains should exist"

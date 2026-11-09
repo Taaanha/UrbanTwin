@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth import require_staff
 from app.database import get_db
 from app.models.simulation import GreenSpace, Scenario
+from app.services import flood
 from app.services import simulation as sim
 from app.services.audit import audit
 from app.services.planner import _candidates, evaluate_methods, generate_interventions
@@ -140,3 +141,38 @@ def get_scenario(public_id: str, db: Session = Depends(get_db)) -> dict[str, Any
     if row is None:
         raise HTTPException(status_code=404, detail="Scenario not found.")
     return _serialize(row)
+
+
+@router.get("/scenarios/{public_id}/buildings")
+def scenario_buildings(public_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    row = db.scalar(select(Scenario).where(Scenario.public_id == public_id))
+    if row is None or row.kind != "green":
+        raise HTTPException(status_code=404, detail="Green scenario not found.")
+    return sim.scenario_buildings(db, row)
+
+
+@router.get("/flood/status")
+def flood_status() -> dict[str, Any]:
+    return flood.status()
+
+
+@router.post("/flood/dem")
+def flood_fetch_dem(actor: str = Depends(require_staff), db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Download and cache the elevation tiles. Needs internet on the machine running the API."""
+    try:
+        flood.fetch_dem()
+    except flood.DemUnavailable as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    audit(db, actor=actor, action="simulation.dem_fetch", entity_type="dem", entity_id="terrarium", detail={"zoom": flood.ZOOM})
+    db.commit()
+    return flood.status()
+
+
+@router.get("/flood")
+def flood_what_if(level_m: float, connected_only: bool = True, db: Session = Depends(get_db)) -> dict[str, Any]:
+    try:
+        return flood.run(db, level_m, connected_only)
+    except flood.DemUnavailable as exc:
+        raise HTTPException(status_code=409, detail=f"{exc} Download the elevation data first.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -98,3 +98,15 @@ def test_budget_scenarios_compare_methods_and_optimal_is_at_least_greedy():
             assert other["spent_bdt"] <= run["budget_bdt"] + 1e-6
     assert body["runs"][2]["methods"]["optimal_knapsack"]["included_count"] == 4
     assert client.post("/api/simulation/budget", json={"budgets_bdt": [-5]}).status_code == 400
+
+
+def test_green_result_carries_an_uncertainty_range_that_brackets_the_central_value():
+    _seed_buildings()
+    _seed_green()
+    result = client.post("/api/simulation/green", json={"name": "range", "sites": 3, "trees_per_site": 25}).json()["result"]
+    u = result["uncertainty"]
+    pct = u["access_after_pct"]
+    assert pct["low"] <= pct["central"] <= pct["high"]
+    assert pct["central"] == result["city_after"]["access_pct"]
+    assert [r["factor"] for r in u["rows"]] == [0.75, 1.0, 1.25]
+    assert "Tree survival and canopy growth" in u["not_modelled"]
