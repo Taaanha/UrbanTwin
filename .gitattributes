@@ -1,0 +1,7 @@
+# Keep line endings consistent between Windows and Linux so git does not show whole-file changes
+* text=auto
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.npz binary
