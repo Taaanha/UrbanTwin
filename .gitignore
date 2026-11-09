@@ -23,3 +23,11 @@ datasets/raw/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Cached elevation tiles and local test photos
+backend/data/
+datasets/test_photos/
+
+# Playwright output
+frontend/test-results/
+frontend/playwright-report/
