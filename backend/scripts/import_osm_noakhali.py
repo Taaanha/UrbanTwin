@@ -381,7 +381,7 @@ def import_osm_ways(db, payload: dict) -> dict[str, int]:
                         name=tags.get("name") or tags.get("name:en"),
                         osm_id=osm_id,
                         geom=from_shape(part, srid=4326),
-                        properties={"building": tags.get("building")},
+                        properties={k: v for k, v in {"building": tags.get("building"), "height": tags.get("height"), "levels": tags.get("building:levels")}.items() if v},
                         is_demo=False,
                     )
                 )

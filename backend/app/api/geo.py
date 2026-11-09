@@ -1,6 +1,8 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends
+import json
+
+from fastapi import APIRouter, Depends, Response
 from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
 from sqlalchemy import func, select
@@ -18,6 +20,7 @@ from app.models.geo import (
     WaterBody,
 )
 
+from app.building_height import building_height
 router = APIRouter(prefix="/api/geo", tags=["geo"])
 
 
@@ -142,18 +145,38 @@ def roads(db: Session = Depends(get_db)) -> dict[str, Any]:
     )
 
 
+def _height_props(properties: dict | None) -> dict[str, Any]:
+    height, source = building_height(properties)
+    return {"height_m": height, "height_source": source}
+
+
+_BUILDINGS_CACHE: dict[str, Any] = {"key": None, "body": b""}
+
+
 @router.get("/buildings")
-def buildings(db: Session = Depends(get_db)) -> dict[str, Any]:
-    rows = db.scalars(select(Building)).all()
-    return _collection(
-        [
-            _feature(
-                row.geom,
-                {"name": row.name, "osm_id": row.osm_id, "is_demo": row.is_demo},
-            )
-            for row in rows
-        ]
-    )
+def buildings(db: Session = Depends(get_db)) -> Response:
+    """Footprints as GeoJSON. About 1.7 MB and several seconds to build, so the serialized body is cached
+    until the building rows change (checked with a cheap count/max/sum query)."""
+    key = tuple(db.execute(select(func.count(Building.id), func.max(Building.id), func.sum(Building.id))).one())
+    if _BUILDINGS_CACHE["key"] != key:
+        rows = db.scalars(select(Building)).all()
+        data = _collection(
+            [
+                _feature(
+                    row.geom,
+                    {
+                        "name": row.name,
+                        "osm_id": row.osm_id,
+                        "is_demo": row.is_demo,
+                        **_height_props(row.properties),
+                    },
+                )
+                for row in rows
+            ]
+        )
+        _BUILDINGS_CACHE["body"] = json.dumps(data, default=str).encode()
+        _BUILDINGS_CACHE["key"] = key
+    return Response(_BUILDINGS_CACHE["body"], media_type="application/json", headers={"Cache-Control": "private, max-age=60"})
 
 
 @router.get("/water")
