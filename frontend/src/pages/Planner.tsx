@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../api";
 import maplibregl from "maplibre-gl";
+import { createMap, getBasemap, onStyleReady, setBasemap, type Basemap } from "../map";
+import { addBuildings3D, columnFeature, set3D } from "../map3d";
+import { MapToolbar } from "../ui";
 
 type Rate = {
   id: number;
@@ -63,6 +66,11 @@ function money(value: number) {
 export default function Planner() {
   const mapNode = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const rowsRef = useRef<Intervention[]>([]);
+  const [ready, setReady] = useState(false);
+  const [view3d, setView3d] = useState(false);
+  const [basemap, setBase] = useState<Basemap>(getBasemap());
+  const [after, setAfter] = useState(true);
   const [rates, setRates] = useState<Rate[]>([]);
   const [items, setItems] = useState<Intervention[]>([]);
   const [compare, setCompare] = useState<Compare | null>(null);
@@ -118,33 +126,72 @@ export default function Planner() {
 
   useEffect(() => {
     if (!mapNode.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: mapNode.current,
-      center: [91.099, 22.869],
-      zoom: 14,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize: 256,
-            attribution: "© OpenStreetMap contributors",
-          },
-        },
-        layers: [{ id: "osm", type: "raster", source: "osm" }],
-      },
-    });
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    const map = createMap(mapNode.current);
+    map.setZoom(14);
     mapRef.current = map;
-    const onReady = () => map.resize();
-    if (map.loaded()) onReady();
-    else map.once("load", onReady);
+    const onReady = () => {
+      map.resize();
+      void addBuildings3D(map).then(() => setReady(true));
+    };
+    onStyleReady(map, onReady);
     return () => {
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && ready) set3D(map, view3d, []);
+  }, [view3d, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && ready) setBasemap(map, basemap);
+  }, [basemap, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const rows = plan ? [...plan.included, ...plan.deferred] : items;
+    rowsRef.current = rows;
+    const pillars = {
+      type: "FeatureCollection" as const,
+      features: rows.map((item) => {
+        const included = plan ? plan.included.some((row) => row.public_id === item.public_id) : false;
+        const addressed = Boolean(plan) && after && included;
+        return columnFeature(item.longitude, item.latitude, 9, {
+          public_id: item.public_id,
+          h: addressed ? 4 : Math.max(12, item.priority_score * 1.4),
+          color: !plan ? "#fb923c" : addressed ? "#34d399" : "#f43f5e",
+        });
+      }),
+    };
+    const src = map.getSource("src-plan-3d") as maplibregl.GeoJSONSource | undefined;
+    if (src) src.setData(pillars as never);
+    else {
+      map.addSource("src-plan-3d", { type: "geojson", data: pillars as never });
+      map.addLayer({
+        id: "plan-pillars",
+        type: "fill-extrusion",
+        source: "src-plan-3d",
+        layout: { visibility: view3d ? "visible" : "none" },
+        paint: {
+          "fill-extrusion-color": ["get", "color"],
+          "fill-extrusion-height": ["get", "h"],
+          "fill-extrusion-opacity": 0.95,
+          "fill-extrusion-vertical-gradient": true,
+        },
+      });
+      map.on("click", "plan-pillars", (event) => {
+        const publicId = event.features?.[0]?.properties?.public_id;
+        const found = rowsRef.current.find((row) => row.public_id === publicId);
+        if (found) setSelected(found);
+      });
+    }
+    if (map.getLayer("plan-pillars")) map.setLayoutProperty("plan-pillars", "visibility", view3d ? "visible" : "none");
+    if (map.getLayer("plan-circles")) map.setLayoutProperty("plan-circles", "visibility", view3d ? "none" : "visible");
+  }, [items, plan, ready, view3d, after]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -183,7 +230,7 @@ export default function Planner() {
       const found = (plan ? [...plan.included, ...plan.deferred] : items).find((row) => row.public_id === publicId);
       if (found) setSelected(found);
     });
-  }, [items, plan]);
+  }, [items, plan, ready]);
 
   return (
     <div className="flex h-full min-h-0">
@@ -224,7 +271,44 @@ export default function Planner() {
           ))}
         </ul>
       </aside>
-      <main ref={mapNode} className="min-w-0 flex-1" />
+      <div className="relative min-w-0 flex-1">
+        <div ref={mapNode} style={{ position: "absolute", inset: 0 }} />
+        <MapToolbar
+          view3d={view3d}
+          onView3d={setView3d}
+          basemap={basemap}
+          onBasemap={setBase}
+          extra={
+            plan && view3d ? (
+              <div className="flex gap-1 rounded-lg bg-slate-950/70 p-0.5 text-[11px] font-medium">
+                {[
+                  [false, "Before"],
+                  [true, "After this pack"],
+                ].map(([v, label]) => (
+                  <button
+                    key={String(label)}
+                    onClick={() => setAfter(v as boolean)}
+                    className={`rounded-md px-2 py-1 ${after === v ? "bg-emerald-400 text-slate-950" : "text-slate-300"}`}
+                  >
+                    {label as string}
+                  </button>
+                ))}
+              </div>
+            ) : null
+          }
+        />
+        {view3d ? (
+          <div className="glass absolute bottom-3 left-3 z-10 max-w-xs p-3 text-[11px] leading-snug text-slate-300">
+            <p className="eyebrow mb-1">3D planning view</p>
+            <p>
+              Column height = priority score. <span className="text-rose-400">Red</span> = open problem,{" "}
+              <span className="text-emerald-400">green</span> = would be addressed by the selected pack, <span className="text-orange-400">orange</span> =
+              proposed (no pack chosen yet).
+            </p>
+            <p className="mt-1 text-slate-500">A proposal view, not a forecast: the real effect of repairs is not modelled.</p>
+          </div>
+        ) : null}
+      </div>
       <aside className="w-[26rem] overflow-auto border-l border-slate-800 p-4 text-sm">
         {plan ? (
           <div className="space-y-3">

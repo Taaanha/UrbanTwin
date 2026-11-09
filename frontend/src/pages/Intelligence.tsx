@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../api";
 import maplibregl from "maplibre-gl";
+import { createMap, onStyleReady } from "../map";
 import { useParams } from "react-router-dom";
 
 type IssueRow = {
@@ -111,24 +112,8 @@ export default function Intelligence() {
 
   useEffect(() => {
     if (!mapNode.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: mapNode.current,
-      center: [91.099, 22.869],
-      zoom: 14,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize: 256,
-            attribution: "© OpenStreetMap contributors",
-          },
-        },
-        layers: [{ id: "osm", type: "raster", source: "osm" }],
-      },
-    });
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    const map = createMap(mapNode.current);
+    map.setZoom(14);
     mapRef.current = map;
     const onReady = async () => {
       map.resize();
@@ -142,7 +127,7 @@ export default function Intelligence() {
         id: "roads-line",
         type: "line",
         source: "src-roads",
-        paint: { "line-color": "#334155", "line-width": 1.2 },
+        paint: { "line-color": "#64748b", "line-width": 1.2 },
       });
       map.addLayer({
         id: "drains-line",
@@ -180,8 +165,7 @@ export default function Intelligence() {
         }
       });
     };
-    if (map.loaded()) void onReady();
-    else map.once("load", () => void onReady());
+    onStyleReady(map, () => void onReady());
     return () => {
       map.remove();
       mapRef.current = null;

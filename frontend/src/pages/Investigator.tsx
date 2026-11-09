@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, apiJson } from "../api";
 import { useParams } from "react-router-dom";
+import { Badge, SEVERITY_COLOR, categoryLabel, titleCase } from "../ui";
 
 type QueueItem = {
   tracking_id: string;
@@ -43,6 +44,8 @@ type Inspect = {
 type AiBox = { label: string; x: number; y: number; w: number; h: number };
 type AiResult = {
   provider: string;
+  local?: boolean;
+  fallback_from?: string[];
   model: string;
   warning: string;
   is_problem: boolean | null;
@@ -53,11 +56,11 @@ type AiResult = {
   summary: string;
   generated_at: string;
 };
-type AiProviders = Record<string, { configured: boolean; model: string | null }>;
+type AiProviders = Record<string, { configured: boolean; model: string | null; local?: boolean }>;
 
 function AiOpinionPanel({ trackingId, imageUrl }: { trackingId: string; imageUrl?: string }) {
   const [providers, setProviders] = useState<AiProviders>({});
-  const [provider, setProvider] = useState("gemini");
+  const [provider, setProvider] = useState("auto");
   const [result, setResult] = useState<AiResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -96,22 +99,26 @@ function AiOpinionPanel({ trackingId, imageUrl }: { trackingId: string; imageUrl
     <div className="space-y-2 rounded border border-slate-800 p-3 text-xs">
       <h2 className="text-sm font-semibold">AI second opinion (optional)</h2>
       <p className="text-slate-400">
-        Sends this report's photo (location data removed) to a third-party AI service. Suggestion only: it never changes the
+        Sends this report's photo (location data removed) to the chosen AI model: a third-party service, or a local one if you pick the local model. Suggestion only: it never changes the
         report or creates an issue.
       </p>
       {!anyConfigured ? (
-        <p className="text-slate-500">No provider configured. Add GEMINI_API_KEY or HF_API_TOKEN + HF_DETECTION_MODEL to backend/.env.</p>
+        <p className="text-slate-500">No provider configured. Add GEMINI_API_KEY, or OLLAMA_URL + OLLAMA_MODEL (local, free), or HF_API_TOKEN (Hugging Face) to backend/.env.</p>
       ) : null}
       <div className="flex gap-2">
         <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1">
+          <option value="auto" disabled={!anyConfigured}>
+            Automatic (first that answers)
+          </option>
           {Object.entries(providers).map(([name, info]) => (
             <option key={name} value={name} disabled={!info.configured}>
               {name}
+              {info.local ? " (local)" : ""}
               {info.configured ? "" : " (not configured)"}
             </option>
           ))}
         </select>
-        <button className="rounded bg-sky-700 px-3 py-1 text-white disabled:opacity-50" disabled={busy || !providers[provider]?.configured} onClick={() => void run()}>
+        <button className="rounded bg-sky-700 px-3 py-1 text-white disabled:opacity-50" disabled={busy || !(provider === "auto" ? anyConfigured : providers[provider]?.configured)} onClick={() => void run()}>
           {busy ? "Asking…" : "Ask AI"}
         </button>
       </div>
@@ -123,9 +130,12 @@ function AiOpinionPanel({ trackingId, imageUrl }: { trackingId: string; imageUrl
             {result.provider} · {result.model} · problem seen: <b>{result.is_problem == null ? "unknown" : result.is_problem ? "yes" : "no"}</b>
             {result.category ? ` · ${result.category}` : ""}
             {result.severity ? ` · ${result.severity}` : ""}
-            {result.confidence != null ? ` · confidence ${(result.confidence * 100).toFixed(0)}%` : ""}
+            {result.confidence != null ? ` · model's own score ${(result.confidence * 100).toFixed(0)}% (not a probability)` : ""}
           </p>
           <p className="text-slate-300">{result.summary}</p>
+          {result.fallback_from?.length ? (
+            <p className="text-slate-500">Tried first and failed: {result.fallback_from.join(" | ")}</p>
+          ) : null}
           {imageUrl && result.boxes.length ? (
             <div className="relative inline-block">
               <img src={imageUrl} alt="with AI boxes" className="max-h-64 rounded" />
@@ -215,24 +225,37 @@ export default function Investigator() {
   return (
     <div className="grid h-full min-h-0 lg:grid-cols-[20rem_1fr_22rem]">
       <aside className="overflow-auto border-r border-slate-800 p-3 text-sm">
-        <p className="text-xs uppercase tracking-wide text-slate-500">City Investigator</p>
-        <p className="mt-1 text-xs text-amber-300">Suggestions only. Nothing is auto-merged.</p>
+        <p className="eyebrow">Module 2</p>
+        <h2 className="text-base font-semibold text-white">City Investigator</h2>
+        <p className="mt-1 rounded-md bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200 ring-1 ring-amber-500/30">Suggestions only. Nothing is auto-merged.</p>
         <ul className="mt-3 space-y-2">
           {queue.map((item) => (
             <li key={item.tracking_id}>
               <button
-                className="w-full rounded border border-slate-800 p-2 text-left hover:border-slate-600"
+                className="panel w-full p-3 text-left transition-colors hover:border-sky-500/60"
                 onClick={() => void openReport(item.tracking_id)}
               >
-                <p className="font-mono text-xs">{item.tracking_id}</p>
-                <p>
-                  {item.category} · score {item.top_score} · {item.top_label}
-                </p>
-                {item.has_verification ? (
-                  <p className="text-xs text-emerald-400">Has verification history</p>
-                ) : (
-                  <p className="text-xs text-amber-400">Needs review</p>
-                )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[11px] text-slate-400">{item.tracking_id}</span>
+                  <Badge color={SEVERITY_COLOR[item.severity] ?? "#94a3b8"}>{titleCase(item.severity)}</Badge>
+                </div>
+                <p className="mt-1.5 text-sm font-medium text-white">{categoryLabel(item.category)}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, (item.top_score / 125) * 100)}%`,
+                        background: item.top_score >= 70 ? "#fb923c" : item.top_score >= 40 ? "#facc15" : "#38bdf8",
+                      }}
+                    />
+                  </div>
+                  <span className="num text-[11px] text-slate-300">{item.top_score}/125</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge color={item.top_label === "possible_duplicate" ? "#fb923c" : "#94a3b8"}>{titleCase(item.top_label)}</Badge>
+                  {item.has_verification ? <Badge color="#34d399">Has verification history</Badge> : <Badge color="#fbbf24">Needs review</Badge>}
+                </div>
               </button>
             </li>
           ))}
@@ -252,7 +275,9 @@ export default function Investigator() {
               {inspect.report.latitude.toFixed(5)}, {inspect.report.longitude.toFixed(5)}
             </p>
             {inspect.report.evidence.map((file) => (
-              <img key={file.url} src={file.url} alt="evidence" className="max-h-40 rounded" />
+              <a key={file.url} href={file.url} target="_blank" rel="noreferrer" title="Open the full photo in a new tab" className="block">
+                <img src={file.url} alt="evidence" className="max-h-64 max-w-full rounded border border-slate-700" />
+              </a>
             ))}
             <AiOpinionPanel trackingId={inspect.report.tracking_id} imageUrl={inspect.report.evidence[0]?.url} />
             <h2 className="pt-2 font-semibold">Possible matches</h2>

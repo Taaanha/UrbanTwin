@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Badge, STATUS_COLOR, titleCase } from "../ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiFetch, apiJson, money } from "../api";
 
@@ -132,15 +133,28 @@ export default function Accountability() {
   return (
     <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[360px_1fr]">
       <aside className="space-y-4 overflow-y-auto border-r border-slate-800 p-4 text-xs">
-        <h1 className="text-sm font-semibold">City Accountability</h1>
+        <div>
+          <p className="eyebrow">Module 5</p>
+          <h2 className="text-base font-semibold text-white">City Accountability</h2>
+        </div>
         {summary ? (
-          <div className="rounded border border-slate-800 bg-slate-900 p-3">
-            <p>
-              {summary.projects} projects · {money(summary.approved_budget_bdt)} approved · {money(summary.spent_bdt)} recorded
-              spending
-            </p>
-            <p className="mt-1 text-amber-300">{summary.flagged_for_review} flagged for independent review</p>
-            <p className="mt-2 text-slate-400">{summary.disclaimer}</p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["Projects", String(summary.projects), "#22d3ee"],
+                ["Flagged for review", String(summary.flagged_for_review), "#fbbf24"],
+                ["Approved", money(summary.approved_budget_bdt), "#34d399"],
+                ["Recorded spend", money(summary.spent_bdt), "#818cf8"],
+              ].map(([label, value, color]) => (
+                <div key={label} className="panel p-3">
+                  <p className="eyebrow">{label}</p>
+                  <p className="num mt-1 text-base font-semibold" style={{ color }}>
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="rounded-md bg-slate-900/70 p-2.5 text-[11px] leading-relaxed text-slate-400 ring-1 ring-slate-800">{summary.disclaimer}</p>
           </div>
         ) : null}
         {message ? <p className="rounded border border-amber-700 bg-amber-950 p-2 text-amber-200">{message}</p> : null}
@@ -150,16 +164,22 @@ export default function Accountability() {
             <li key={p.public_id}>
               <button
                 onClick={() => navigate(`/accountability/${p.public_id}`)}
-                className={`w-full rounded border p-2 text-left ${detail?.public_id === p.public_id ? "border-sky-600" : "border-slate-800"} bg-slate-900`}
+                className={`panel w-full p-3 text-left transition-colors ${detail?.public_id === p.public_id ? "!border-sky-400" : "hover:border-slate-500"}`}
               >
-                <div className="font-mono">
-                  {p.public_id} {p.is_demo ? <span className="rounded bg-sky-900 px-1 text-sky-200">DEMO</span> : null}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[11px] text-slate-400">{p.public_id}</span>
+                  {p.is_demo ? <Badge color="#22d3ee">DEMO</Badge> : null}
                 </div>
-                <div className="text-slate-300">{p.title}</div>
-                <div className="mt-1 flex items-center gap-2">
-                  <span>{p.status}</span>
-                  <span>{p.progress_pct}%</span>
-                  <span className={`rounded px-1 ${badge(p.review_flag)}`}>{flagText(p.review_flag)}</span>
+                <div className="mt-1 text-sm font-medium text-white">{p.title}</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                    <div className="h-full rounded-full" style={{ width: `${p.progress_pct}%`, background: STATUS_COLOR[p.status] ?? "#22d3ee" }} />
+                  </div>
+                  <span className="num text-[11px] text-slate-300">{p.progress_pct}%</span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Badge color={STATUS_COLOR[p.status] ?? "#94a3b8"}>{titleCase(p.status)}</Badge>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${badge(p.review_flag)}`}>{flagText(p.review_flag)}</span>
                 </div>
               </button>
             </li>

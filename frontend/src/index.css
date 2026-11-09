@@ -1,9 +1,177 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* UrbanTwin dark "operations centre" theme.
+   Re-mapping Tailwind's slate and sky ramps re-skins every page at once. */
+@theme {
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Noto Sans Bengali", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --color-slate-50: #f4f7fb;
+  --color-slate-100: #e8edf5;
+  --color-slate-200: #d3dbe9;
+  --color-slate-300: #b0bdd3;
+  --color-slate-400: #8696b4;
+  --color-slate-500: #5f7092;
+  --color-slate-600: #3c4c6e;
+  --color-slate-700: #263554;
+  --color-slate-800: #182440;
+  --color-slate-900: #0d1628;
+  --color-slate-950: #070d1a;
+
+  --color-sky-50: #ecfeff;
+  --color-sky-100: #cffafe;
+  --color-sky-200: #a5f3fc;
+  --color-sky-300: #67e8f9;
+  --color-sky-400: #22d3ee;
+  --color-sky-500: #06b6d4;
+  --color-sky-600: #0891b2;
+  --color-sky-700: #0e7490;
+  --color-sky-800: #155e75;
+  --color-sky-900: #164e63;
+  --color-sky-950: #083344;
+}
+
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
 }
+
+body {
+  background: #070d1a;
+  color: #e8edf5;
+  font-family: var(--font-sans);
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Form controls: dark, consistent, visible focus */
+select,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea {
+  background-color: #070d1a;
+  border: 1px solid #263554;
+  border-radius: 0.375rem;
+  color: #e8edf5;
+}
+select,
+input:not([type="checkbox"]):not([type="radio"]),
+textarea {
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgb(34 211 238 / 0.15);
+}
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: #22d3ee;
+}
+button {
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+code {
+  font-family: var(--font-mono);
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #263554 transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #263554;
+  border-radius: 8px;
+}
+
+/* Surfaces */
+.panel {
+  background: linear-gradient(180deg, rgb(24 36 64 / 0.72), rgb(13 22 40 / 0.86));
+  border: 1px solid rgb(59 82 128 / 0.45);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.glass {
+  background: rgb(9 16 32 / 0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(59 82 128 / 0.5);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+}
+.bg-grid {
+  background-image: radial-gradient(60rem 30rem at 85% -10%, rgb(34 211 238 / 0.08), transparent 60%),
+    radial-gradient(50rem 30rem at -10% 110%, rgb(99 102 241 / 0.07), transparent 60%);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.eyebrow {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8696b4;
+  font-weight: 600;
+}
+
+@keyframes ut-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0.6); }
+  70% { box-shadow: 0 0 0 7px rgb(52 211 153 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0); }
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #34d399;
+  animation: ut-pulse 2s infinite;
+}
+@keyframes ut-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: ut-rise 0.35s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise, .live-dot { animation: none; }
+}
+
+/* MapLibre on dark */
+.maplibregl-popup-content {
+  background: #0d1628;
+  color: #e8edf5;
+  border: 1px solid #263554;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: #0d1628; }
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #0d1628; }
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: #0d1628; }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: #0d1628; }
+.maplibregl-popup-close-button { color: #8696b4; }
+.maplibregl-ctrl-group {
+  background: #0d1628;
+  border: 1px solid #263554;
+  box-shadow: none;
+}
+.maplibregl-ctrl-group button + button { border-top: 1px solid #263554; }
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1) brightness(0.9); }
+.maplibregl-ctrl-attrib {
+  background: rgb(7 13 26 / 0.7) !important;
+  color: #8696b4 !important;
+}
+.maplibregl-ctrl-attrib a { color: #b0bdd3 !important; }

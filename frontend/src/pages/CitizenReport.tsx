@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import maplibregl from "maplibre-gl";
+import { createMap, webglAvailable } from "../map";
 
 type Meta = {
   categories: Record<string, { en: string; bn: string }>;
@@ -36,23 +37,11 @@ export default function CitizenReport() {
     if (!mapNode.current) {
       return;
     }
-    const map = new maplibregl.Map({
-      container: mapNode.current,
-      center: CENTER,
-      zoom: 14,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize: 256,
-            attribution: "© OpenStreetMap contributors",
-          },
-        },
-        layers: [{ id: "osm", type: "raster", source: "osm" }],
-      },
-    });
+    const map = createMap(mapNode.current);
+    map.setZoom(14);
+    if (!webglAvailable()) {
+      return () => map.remove();
+    }
     const marker = new maplibregl.Marker({ color: "#dc2626", draggable: true })
       .setLngLat(CENTER)
       .addTo(map);
@@ -91,6 +80,10 @@ export default function CitizenReport() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (lat === CENTER[1] && lng === CENTER[0]) {
+      setError(t("Please tap the map (or use your location) to mark where the problem is. The pin has not been moved yet.", "সমস্যার জায়গাটি মানচিত্রে ট্যাপ করে বা আপনার অবস্থান ব্যবহার করে চিহ্নিত করুন। পিন এখনো সরানো হয়নি।"));
+      return;
+    }
     setBusy(true);
     setError(null);
     const form = new FormData(event.currentTarget);
@@ -130,8 +123,8 @@ export default function CitizenReport() {
   }
 
   return (
-    <div className="grid h-full min-h-0 lg:grid-cols-2">
-      <form className="overflow-auto p-5 space-y-3" onSubmit={onSubmit}>
+    <div className="grid h-full min-h-0 grid-rows-[auto_auto] overflow-y-auto lg:grid-cols-2 lg:grid-rows-1 lg:overflow-hidden">
+      <form className="space-y-3 p-5 lg:overflow-auto" onSubmit={onSubmit}>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">{t("Report a city problem", "শহরের সমস্যা জানান")}</h1>
           <button
@@ -200,7 +193,12 @@ export default function CitizenReport() {
           {busy ? t("Submitting…", "জমা হচ্ছে…") : t("Submit report", "রিপোর্ট জমা দিন")}
         </button>
       </form>
-      <div ref={mapNode} className="min-h-[240px] border-t border-slate-800 lg:border-l lg:border-t-0" />
+      <div className="relative order-first h-[280px] border-b border-slate-800 lg:order-none lg:h-auto lg:min-h-[320px] lg:border-b-0 lg:border-l">
+        <div ref={mapNode} className="absolute inset-0" style={{ position: "absolute", inset: 0 }} />
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-md bg-slate-950/85 px-3 py-2 text-xs text-slate-100 shadow">
+          {t("Tap the map (or drag the red pin) to mark where the problem is.", "সমস্যার জায়গা চিহ্নিত করতে মানচিত্রে ট্যাপ করুন বা লাল পিন টেনে আনুন।")}
+        </div>
+      </div>
     </div>
   );
 }
