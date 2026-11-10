@@ -32,6 +32,7 @@ type Inspect = {
     category: string;
     severity: string;
     description: string;
+    location_text?: string | null;
     latitude: number;
     longitude: number;
     evidence: Array<{ url: string }>;
@@ -271,6 +272,7 @@ export default function Investigator() {
               {inspect.report.category} · {inspect.report.severity}
             </p>
             <p className="text-slate-300">{inspect.report.description}</p>
+            {inspect.report.location_text ? <p className="text-xs text-slate-400">Place: {inspect.report.location_text}</p> : null}
             <p className="text-xs text-slate-500">
               {inspect.report.latitude.toFixed(5)}, {inspect.report.longitude.toFixed(5)}
             </p>

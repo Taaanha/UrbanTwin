@@ -7,6 +7,7 @@ type Report = {
   severity: string;
   status: string;
   description: string;
+  location_text?: string | null;
   is_verified_issue: boolean;
   created_at: string;
   evidence: Array<{ id: number; url: string; original_name: string }>;
@@ -62,6 +63,7 @@ export default function TrackReport() {
           <p>Category: {report.category}</p>
           <p>Severity: {report.severity}</p>
           <p className="text-slate-300">{report.description}</p>
+          {report.location_text ? <p className="text-slate-400">Place: {report.location_text}</p> : null}
           <p className="text-xs text-amber-300">
             {report.is_verified_issue
               ? "Verified issue"

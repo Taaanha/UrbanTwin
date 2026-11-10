@@ -61,6 +61,7 @@ type ReportItem = {
   severity: string;
   status: string;
   description: string;
+  location_text?: string | null;
   latitude: number;
   longitude: number;
   evidence?: Array<{ id: number; url: string; original_name?: string | null }>;
@@ -528,6 +529,7 @@ export default function Dashboard() {
               <StatusBadge value={selected.status} />
             </div>
             <p className="mt-2 text-slate-300">{selected.description}</p>
+            {selected.location_text ? <p className="mt-1 text-[12px] text-slate-400">Place: {selected.location_text}</p> : null}
             {selected.evidence?.length ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {selected.evidence.map((file) => (

@@ -19,6 +19,8 @@ class Report(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(String(8), default="en")
     reporter_name: Mapped[str | None] = mapped_column(String(128))
+    # Free-text place name or landmark written by the citizen ("near the market, Shonapur"). Not verified.
+    location_text: Mapped[str | None] = mapped_column(String(200))
     geom = mapped_column(Geometry(geometry_type="POINT", srid=4326), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="submitted", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)

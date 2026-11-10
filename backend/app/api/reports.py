@@ -48,6 +48,7 @@ def _public_report(report: Report, include_contact: bool = False) -> dict[str, A
         "category": report.category,
         "severity": report.severity,
         "description": report.description,
+        "location_text": report.location_text,
         "language": report.language,
         "status": report.status,
         "record_type": "citizen_report",
@@ -91,6 +92,7 @@ async def create_report(
     longitude: float = Form(),
     language: str = Form("en"),
     reporter_name: str | None = Form(None),
+    location_text: str | None = Form(None),
     files: list[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -104,6 +106,9 @@ async def create_report(
     if len(text) < 8:
         raise HTTPException(status_code=400, detail="Please describe the problem (at least 8 characters).")
     _validate_location(longitude, latitude)
+    place = " ".join((location_text or "").split())
+    if len(place) > 200:
+        raise HTTPException(status_code=400, detail="The place name or landmark is too long (200 characters at most).")
 
     saved = await save_images(files)
     tracking_id = _tracking_id()
@@ -117,6 +122,7 @@ async def create_report(
         description=text,
         language=language,
         reporter_name=(reporter_name or "").strip() or None,
+        location_text=place or None,
         geom=from_shape(Point(longitude, latitude), srid=4326),
         status="submitted",
     )

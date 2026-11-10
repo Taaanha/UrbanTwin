@@ -72,6 +72,7 @@ def _report_brief(report: Report) -> dict[str, Any]:
         "category": report.category,
         "severity": report.severity,
         "description": report.description,
+        "location_text": report.location_text,
         "status": report.status,
         "longitude": point.x,
         "latitude": point.y,

@@ -167,6 +167,15 @@ export default function CitizenReport() {
           <textarea name="description" required minLength={8} rows={4} className="mt-1 w-full rounded bg-slate-900 p-2" />
         </label>
         <label className="block text-sm">
+          {t("Place or landmark (optional)", "জায়গা বা পরিচিত স্থান (ঐচ্ছিক)")}
+          <input
+            name="location_text"
+            maxLength={200}
+            placeholder={t("e.g. near Shonapur Zero Point, in front of the market", "যেমন: সোনাপুর জিরো পয়েন্টের কাছে, বাজারের সামনে")}
+            className="mt-1 w-full rounded bg-slate-900 p-2"
+          />
+        </label>
+        <label className="block text-sm">
           {t("Your name (optional)", "আপনার নাম (ঐচ্ছিক)")}
           <input name="reporter_name" className="mt-1 w-full rounded bg-slate-900 p-2" />
         </label>
