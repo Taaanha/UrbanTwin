@@ -4,7 +4,7 @@ import { apiJson, money } from "../api";
 import { createMap, getBasemap, onStyleReady, setBasemap, type Basemap } from "../map";
 import { set3D } from "../map3d";
 import { applyFlood, applyGreen, initScenarioLayers, syncCameras, type FC, type FloodResult } from "../scenarioMap";
-import { HBars, MapToolbar, Notice, Panel } from "../ui";
+import { HBars, MapToolbar, Notice, Panel, wardLabel } from "../ui";
 import { CandidateBadge, CompareHandle, RangeBar } from "../widgets";
 
 type WardRow = {
@@ -370,7 +370,7 @@ export default function Simulation() {
                     <h4 className="eyebrow mb-2 mt-4">Green-space access by ward (after)</h4>
                     <HBars
                       rows={active.result.wards.map((w) => ({
-                        label: `${w.ward.replace(" (demonstration grid)", "")} · ${pct(w.access_pct_before)} → ${pct(w.access_pct_after)}`,
+                        label: `${wardLabel(w.ward)} · ${pct(w.access_pct_before)} → ${pct(w.access_pct_after)}`,
                         value: w.access_pct_after ?? 0,
                         color: "#34d399",
                       }))}
@@ -397,7 +397,7 @@ export default function Simulation() {
                     <h4 className="eyebrow mb-2 mt-4">Green-space access by ward</h4>
                     <HBars
                       rows={baseline.per_ward.map((w) => ({
-                        label: `${w.ward.replace(" (demonstration grid)", "")} · green cover ${w.green_pct}%`,
+                        label: `${wardLabel(w.ward)} · green cover ${w.green_pct}%`,
                         value: w.access_pct ?? 0,
                         color: (w.access_pct ?? 0) < 10 ? "#fb923c" : "#34d399",
                       }))}

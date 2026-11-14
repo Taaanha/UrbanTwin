@@ -3,6 +3,7 @@ import { apiFetch } from "../api";
 import maplibregl from "maplibre-gl";
 import { createMap, onStyleReady } from "../map";
 import { useParams } from "react-router-dom";
+import { AiBrief } from "../aiBrief";
 
 type IssueRow = {
   public_id: string;
@@ -215,6 +216,16 @@ export default function Intelligence() {
               {selected.issue.category} · {selected.issue.severity} · {selected.issue.status}
             </p>
             <p className="text-xs text-slate-400">{selected.issue.title}</p>
+            <AiBrief
+              title="Summarise this issue (AI draft)"
+              url={`/api/intelligence/issues/${selected.issue.public_id}/brief`}
+              resetKey={selected.issue.public_id}
+              fields={[
+                ["summary", "Summary"],
+                ["context", "Context (correlation only)"],
+                ["suggested_checks", "Suggested site checks"],
+              ]}
+            />
             <h2 className="font-semibold">Infrastructure links</h2>
             {selected.assets.length === 0 ? (
               <p className="text-xs text-slate-400">No spatial snaps yet. Recompute links.</p>

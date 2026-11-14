@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch, apiJson } from "./api";
-import { HBars, Icon, Kpi, Notice, Panel, SEVERITY_COLOR, categoryLabel, titleCase } from "./ui";
+import { HBars, Icon, Kpi, Notice, Panel, SEVERITY_COLOR, categoryLabel, titleCase, wardLabel } from "./ui";
 
 /* ------------------------------------------------------------------ visible failures */
 
@@ -41,6 +41,7 @@ type Answer = {
   rows: Array<Record<string, unknown>>;
   caveats: string[];
   examples?: string[];
+  parsed_by?: { method: "rules" | "ai"; provider?: string; local?: boolean; ai_note?: string };
 };
 const EXAMPLES = ["Which ward has the most unresolved drain reports?", "How many high severity reports in the last 7 days?", "What is the most common problem?", "Show the oldest unresolved reports."];
 
@@ -115,6 +116,14 @@ export function AskCity() {
           {res ? (
             <div className="space-y-2">
               <p className={`text-sm ${res.understood ? "text-white" : "text-amber-200"}`}>{res.answer}</p>
+              {res.parsed_by?.method === "ai" ? (
+                <p className="text-[11px] text-violet-300">
+                  Question read by AI ({res.parsed_by.provider}
+                  {res.parsed_by.local ? ", on this machine" : ""}). Check the query below.
+                </p>
+              ) : res.parsed_by?.ai_note ? (
+                <p className="text-[11px] text-slate-500">{res.parsed_by.ai_note}</p>
+              ) : null}
               {res.rows.length ? (
                 <div className="overflow-x-auto rounded-lg border border-slate-800">
                   <table className="w-full text-left">
@@ -162,7 +171,7 @@ export function AskCity() {
               </ul>
             </div>
           ) : null}
-          <p className="text-[10.5px] text-slate-500">Answers come from fixed, read-only database queries chosen by keyword. No AI writes the SQL and nothing is guessed.</p>
+          <p className="text-[10.5px] text-slate-500">Answers come from fixed, read-only database queries. Keywords pick the query; if they cannot, an AI model (when configured) only chooses the query and its filters. It never writes SQL.</p>
         </div>
       ) : null}
     </div>
@@ -362,7 +371,7 @@ export function QualityPanel() {
           <h3 className="eyebrow mb-2">Reports per ward (orange = thin coverage)</h3>
           <HBars
             rows={q.coverage.wards.map((w) => ({
-              label: w.ward.replace(" (demonstration grid)", ""),
+              label: wardLabel(w.ward),
               value: w.reports,
               color: w.thin ? "#fb923c" : "#22d3ee",
             }))}

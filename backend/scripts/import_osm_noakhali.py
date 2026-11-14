@@ -35,6 +35,7 @@ from app.geo_constants import (  # noqa: E402
     OSM_LICENSE,
     OSM_UPAZILA_RELATION_ID,
     STUDY_BBOX,
+    ward_display_name,
 )
 from app.models.geo import (  # noqa: E402
     AdminBoundary,
@@ -319,7 +320,7 @@ def import_demo_wards(db) -> None:
             )
             db.add(
                 Ward(
-                    name=f"Ward {number} (demonstration grid)",
+                    name=ward_display_name(number),
                     ward_number=number,
                     geom=from_shape(cell, srid=4326),
                     is_demo=True,

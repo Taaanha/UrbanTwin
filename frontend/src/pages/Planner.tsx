@@ -4,6 +4,7 @@ import maplibregl from "maplibre-gl";
 import { createMap, getBasemap, onStyleReady, setBasemap, type Basemap } from "../map";
 import { addBuildings3D, columnFeature, set3D } from "../map3d";
 import { MapToolbar } from "../ui";
+import { AiBrief } from "../aiBrief";
 
 type Rate = {
   id: number;
@@ -375,6 +376,21 @@ export default function Planner() {
             </p>
             <p className="text-slate-400">{selected.assumptions}</p>
           </div>
+        ) : null}
+        {compare ? (
+          <AiBrief
+            title="Explain these plans (AI draft)"
+            url="/api/planner/compare/brief"
+            method="POST"
+            body={{ budget_bdt: Number(budget) }}
+            resetKey={`${compare.plans[0]?.budget_bdt}-${compare.plans.map((p) => p.spent_bdt).join(",")}`}
+            fields={[
+              ["summary", "Summary"],
+              ["differences", "How the methods differ"],
+              ["tradeoffs", "Trade-offs"],
+              ["caveats", "Caveats"],
+            ]}
+          />
         ) : null}
         {compare ? (
           <ul className="mt-4 list-disc pl-4 text-[11px] text-slate-500">

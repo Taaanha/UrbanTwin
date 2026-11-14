@@ -38,7 +38,12 @@ export const titleCase = (key: string): string => {
   const text = key.replace(/_/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
-export const categoryLabel = (key: string): string => CATEGORY_LABEL[key] ?? titleCase(key);
+/** "Ward 5 · Guptangk, Harinarayanpur, … (demonstration grid)" -> a chart-friendly label that keeps the ward number and first areas. */
+export const wardLabel = (name: string, max = 42): string => {
+  const text = name.replace(" (demonstration grid)", "");
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+};
+export const categoryLabel =(key: string): string => CATEGORY_LABEL[key] ?? titleCase(key);
 
 /* ---------- icons (inline, no dependency) ---------- */
 const PATHS: Record<string, string> = {

@@ -12,7 +12,7 @@ def submit_report(client, description, *, lon="91.099", lat="22.8692", category=
         data={
             "category": category,
             "severity": severity,
-            "description": description,
+            "location_text": "near the market", "description": description,
             "latitude": lat,
             "longitude": lon,
             "language": "en",

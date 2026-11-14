@@ -13,6 +13,7 @@ const PUBLIC_LINKS: NavItem[] = [
 const MODULE_LINKS: NavItem[] = [
   { to: "/overview", label: "Command overview", icon: "grid" },
   { to: "/dashboard", label: "City Monitor", icon: "map", step: 1 },
+  { to: "/live3d", label: "Live 3D City", icon: "map" },
   { to: "/investigator", label: "City Investigator", icon: "search", step: 2 },
   { to: "/intelligence", label: "City Intelligence", icon: "brain", step: 3 },
   { to: "/planner", label: "City Planner", icon: "wrench", step: 4 },
@@ -227,7 +228,7 @@ export default function Layout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-2.5 backdrop-blur">
+        <header className="relative z-40 flex items-center gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-2.5 backdrop-blur">
           <button
             type="button"
             className="rounded-lg border border-slate-700 p-1.5 text-slate-300 md:hidden"

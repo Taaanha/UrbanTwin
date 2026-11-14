@@ -44,7 +44,11 @@ def _post(tracking_id, provider="gemini"):
     return client.post(f"/api/investigator/reports/{tracking_id}/ai-opinion", json={"provider": provider})
 
 
-def test_unconfigured_providers_return_503_and_listing_hides_keys():
+def test_unconfigured_providers_return_503_and_listing_hides_keys(monkeypatch):
+    # Never let a real key from .env turn this into a live API call.
+    s = get_settings()
+    for field in ("gemini_api_key", "hf_api_token"):
+        monkeypatch.setattr(s, field, "")
     report = submit_report(client, "Pothole for AI second opinion test.")
     assert _post(report["tracking_id"]).status_code == 503
     assert _post(report["tracking_id"], "huggingface").status_code == 503
@@ -140,10 +144,14 @@ def test_requires_staff_token_and_a_photo(staff_auth, keys):
     url = f"/api/investigator/reports/{report['tracking_id']}/ai-opinion"
     assert client.post(url, json={"provider": "gemini"}).status_code == 401
     assert client.post(url, json={"provider": "nope"}, headers=staff_auth).status_code == 400
-    plain = client.post(
-        "/api/reports",
-        data={"category": "pothole", "severity": "low", "description": "No photo on this one.", "latitude": "22.87", "longitude": "91.1"},
-    ).json()
+    # The API now requires a photo, so strip it afterwards to get a report that has none.
+    plain = submit_report(client, "No photo on this one.")
+    from app.database import SessionLocal
+    from app.models import EvidenceFile
+
+    with SessionLocal() as db:
+        db.query(EvidenceFile).filter(EvidenceFile.report_id == plain["id"]).delete()
+        db.commit()
     none = client.post(f"/api/investigator/reports/{plain['tracking_id']}/ai-opinion", json={"provider": "gemini"}, headers=staff_auth)
     assert none.status_code == 409
 

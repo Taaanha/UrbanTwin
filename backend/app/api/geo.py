@@ -107,6 +107,14 @@ def admin_boundaries(db: Session = Depends(get_db)) -> dict[str, Any]:
     )
 
 
+@router.get("/landmarks")
+def landmarks() -> dict[str, Any]:
+    """Hand-kept local places that OpenStreetMap lacks (used by the report form's search)."""
+    from app.landmarks import LANDMARKS
+
+    return {"items": LANDMARKS}
+
+
 @router.get("/wards")
 def wards(db: Session = Depends(get_db)) -> dict[str, Any]:
     rows = db.scalars(select(Ward).order_by(Ward.ward_number)).all()

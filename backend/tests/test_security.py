@@ -60,12 +60,12 @@ def test_upload_validation_rejects_non_images_and_bad_coordinates():
 
     bad = client.post(
         "/api/reports",
-        data={"category": "pothole", "severity": "low", "description": "Not an image upload here.", "latitude": "22.8", "longitude": "91.1"},
+        data={"category": "pothole", "severity": "low", "location_text": "near the market", "description": "Not an image upload here.", "latitude": "22.8", "longitude": "91.1"},
         files={"files": ("evil.png", BytesIO(b"<script>alert(1)</script>"), "image/png")},
     )
     assert bad.status_code == 400
     far = client.post(
         "/api/reports",
-        data={"category": "pothole", "severity": "low", "description": "Pin dropped in the ocean.", "latitude": "0", "longitude": "0"},
+        data={"category": "pothole", "severity": "low", "location_text": "near the market", "description": "Pin dropped in the ocean.", "latitude": "0", "longitude": "0"},
     )
     assert far.status_code == 400

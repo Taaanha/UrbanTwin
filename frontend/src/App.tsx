@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./layout";
 import Accountability from "./pages/Accountability";
@@ -12,6 +13,8 @@ import Planner from "./pages/Planner";
 import Simulation from "./pages/Simulation";
 import TrackReport from "./pages/TrackReport";
 
+const Live3D = lazy(() => import("./pages/Live3D"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -22,6 +25,7 @@ export default function App() {
           <Route path="/track/:trackingId" element={<TrackReport />} />
           <Route path="/overview" element={<Overview />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/live3d" element={<Suspense fallback={null}><Live3D /></Suspense>} />
           <Route path="/investigator" element={<Investigator />} />
           <Route path="/investigator/:trackingId" element={<Investigator />} />
           <Route path="/intelligence" element={<Intelligence />} />

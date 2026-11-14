@@ -66,7 +66,7 @@ export default function Overview() {
   const inProgress = data.accountability.by_status.in_progress ?? 0;
 
   const attention: Array<{ icon: string; color: string; text: string; to: string }> = [];
-  if (unreviewed) attention.push({ icon: "camera", color: "#38bdf8", text: `${unreviewed} citizen report${unreviewed > 1 ? "s" : ""} not yet acknowledged`, to: "/dashboard" });
+  if (unreviewed) attention.push({ icon: "camera", color: "#38bdf8", text: `${unreviewed} citizen report${unreviewed > 1 ? "s" : ""} not yet acknowledged`, to: "/dashboard?status=submitted" });
   if (openIssues) attention.push({ icon: "search", color: "#fb923c", text: `${openIssues} verified issue${openIssues > 1 ? "s" : ""} open, with no completed fix`, to: "/investigator" });
   if (flagged) attention.push({ icon: "brain", color: "#818cf8", text: `${flagged} possible recurrence flag${flagged > 1 ? "s" : ""} awaiting human review`, to: "/intelligence" });
   if (inProgress) attention.push({ icon: "shield", color: "#22d3ee", text: `${inProgress} project${inProgress > 1 ? "s" : ""} in progress, so inspections and updates are due`, to: "/accountability" });

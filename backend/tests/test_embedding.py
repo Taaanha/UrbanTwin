@@ -38,7 +38,7 @@ def _png(color):
 def _report(text, color):
     r = client.post(
         "/api/reports",
-        data={"category": "pothole", "severity": "high", "description": text, "latitude": "22.8692", "longitude": "91.099"},
+        data={"category": "pothole", "severity": "high", "location_text": "near the market", "description": text, "latitude": "22.8692", "longitude": "91.099"},
         files={"files": ("p.png", BytesIO(_png(color)), "image/png")},
     )
     assert r.status_code == 200, r.text

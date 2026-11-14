@@ -16,7 +16,7 @@ def _submit(description: str, lon: str = "91.099", lat: str = "22.869"):
     data = {
         "category": "pothole",
         "severity": "high",
-        "description": description,
+        "location_text": "near the market", "description": description,
         "latitude": lat,
         "longitude": lon,
         "language": "en",

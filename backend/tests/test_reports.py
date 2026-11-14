@@ -17,7 +17,7 @@ def _submit(**overrides):
     data = {
         "category": "pothole",
         "severity": "high",
-        "description": "Large pothole on Station Road near the court.",
+        "location_text": "near the market", "description": "Large pothole on Station Road near the court.",
         "latitude": "22.869",
         "longitude": "91.099",
         "language": "en",
@@ -43,7 +43,7 @@ def test_reject_non_image_upload():
     data = {
         "category": "pothole",
         "severity": "low",
-        "description": "Not an image should be rejected.",
+        "location_text": "near the market", "description": "Not an image should be rejected.",
         "latitude": "22.869",
         "longitude": "91.099",
     }

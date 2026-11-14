@@ -97,6 +97,8 @@ export function createMap(container: HTMLElement, options: { controls?: boolean 
     attributionControl: { compact: true },
     style: {
       version: 8,
+      // Keyless font server so road-name labels can be drawn on any map that adds a symbol layer.
+      glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
       sources: {
         osm: {
           type: "raster",

@@ -16,7 +16,7 @@ def _issue(description: str = "Pothole for planner costing.") -> str:
     data = {
         "category": "pothole",
         "severity": "high",
-        "description": description,
+        "location_text": "near the market", "description": description,
         "latitude": "22.869",
         "longitude": "91.099",
         "language": "en",

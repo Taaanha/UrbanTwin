@@ -331,7 +331,7 @@ export default function Observatory() {
 
       {/* map + register + charts */}
       <div className="grid gap-4 xl:grid-cols-[19rem_minmax(0,1fr)_21rem]">
-        <Panel title="Road register" subtitle={`${visible.length} of ${ALL_CASES.length} shown`} className="flex max-h-[44rem] flex-col xl:max-h-[40rem]">
+        <Panel title="Road register" subtitle={`${visible.length} of ${ALL_CASES.length} shown`} className="flex max-h-[44rem] flex-col xl:h-[40rem] xl:max-h-none">
           <div className="mb-2 flex flex-wrap gap-1.5">
             <button className={chip(filter === "all")} onClick={() => setFilter("all")}>All</button>
             {RECURRENCES.map((k) => (
@@ -408,8 +408,7 @@ export default function Observatory() {
           </div>
         </section>
 
-        <div className="space-y-4">
-          <Panel title="Selected road" subtitle={`${selected.id} · ${selected.upazila}`}>
+        <Panel title="Selected road" subtitle={`${selected.id} · ${selected.upazila}`} className="xl:h-[40rem] xl:overflow-y-auto">
             <h3 className="text-sm font-semibold leading-snug text-white">{selected.road}</h3>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Badge color={RECURRENCE_COLOR[selected.recurrence]}>{RECURRENCE_LABEL[selected.recurrence]}</Badge>
@@ -424,8 +423,10 @@ export default function Observatory() {
             <p className="mt-2 border-t border-slate-800 pt-2 text-[11px] leading-snug text-slate-500">
               Location: {selected.precision === "osm" ? "from OSM geometry. " : ""}{selected.locationNote}
             </p>
-          </Panel>
+        </Panel>
+      </div>
 
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Panel title="Recurrence on the register" subtitle="Only one road has a documented repair history">
             <Donut slices={donut} centerLabel="roads" size={120} />
             <p className="mt-3 text-[11px] leading-snug text-slate-500">
@@ -461,7 +462,6 @@ export default function Observatory() {
               ))}
             </div>
           </Panel>
-        </div>
       </div>
 
       {/* Case 01 */}

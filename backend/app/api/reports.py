@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.auth import require_staff
 from app.database import get_db
+from app.landmarks import find_landmark
 from app.models.reports import EvidenceFile, Report
 from app.report_constants import CATEGORIES, REPORT_STATUSES, SEVERITIES
 from app.services.audit import audit
@@ -93,6 +94,7 @@ async def create_report(
     language: str = Form("en"),
     reporter_name: str | None = Form(None),
     location_text: str | None = Form(None),
+    pin_set: bool = Form(True),
     files: list[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -105,10 +107,19 @@ async def create_report(
     text = description.strip()
     if len(text) < 8:
         raise HTTPException(status_code=400, detail="Please describe the problem (at least 8 characters).")
-    _validate_location(longitude, latitude)
     place = " ".join((location_text or "").split())
+    # No pin dropped, but the typed place is a known landmark: keep the landmark's coordinates.
+    if not pin_set:
+        known = find_landmark(place)
+        if known:
+            latitude, longitude = known["lat"], known["lon"]
+    _validate_location(longitude, latitude)
+    if not place:
+        raise HTTPException(status_code=400, detail="Please give the place or a nearby landmark.")
     if len(place) > 200:
         raise HTTPException(status_code=400, detail="The place name or landmark is too long (200 characters at most).")
+    if not [f for f in files if f.filename]:
+        raise HTTPException(status_code=400, detail="Please attach at least one photo of the problem.")
 
     saved = await save_images(files)
     tracking_id = _tracking_id()

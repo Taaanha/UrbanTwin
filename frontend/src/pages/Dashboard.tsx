@@ -420,6 +420,21 @@ export default function Dashboard() {
                     </div>
                     <p className="mt-1 text-xs font-medium text-slate-100">{categoryLabel(item.category)}</p>
                     <p className="line-clamp-2 text-[11px] text-slate-400">{item.description}</p>
+                    {item.location_text ? <p className="mt-0.5 truncate text-[11px] text-slate-500">📍 {item.location_text}</p> : null}
+                    {item.evidence?.length ? (
+                      <div className="mt-1.5 flex gap-1.5">
+                        {item.evidence.slice(0, 3).map((file) => (
+                          <img
+                            key={file.id}
+                            src={file.url}
+                            alt={`Photo for ${item.tracking_id}`}
+                            loading="lazy"
+                            className="h-12 w-16 rounded border border-slate-700 object-cover"
+                            onError={(e) => ((e.currentTarget.style.display = "none"))}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -531,13 +546,16 @@ export default function Dashboard() {
             <p className="mt-2 text-slate-300">{selected.description}</p>
             {selected.location_text ? <p className="mt-1 text-[12px] text-slate-400">Place: {selected.location_text}</p> : null}
             {selected.evidence?.length ? (
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 space-y-2">
+                <p className="eyebrow">
+                  Photos ({selected.evidence.length})
+                </p>
                 {selected.evidence.map((file) => (
-                  <a key={file.id} href={file.url} target="_blank" rel="noreferrer" title="Open the full photo in a new tab">
+                  <a key={file.id} href={file.url} target="_blank" rel="noreferrer" title="Open the full photo in a new tab" className="block">
                     <img
                       src={file.url}
                       alt={`Photo attached to ${selected.tracking_id}`}
-                      className="h-24 max-w-full rounded border border-slate-700 object-cover"
+                      className="max-h-48 w-full rounded border border-slate-700 object-cover"
                       onError={(e) => ((e.currentTarget.style.display = "none"))}
                     />
                   </a>
