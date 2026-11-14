@@ -21,6 +21,7 @@ HEARTBEAT_EVERY = 5  # polls between keep-alive comments
 
 class AskBody(BaseModel):
     question: str = Field(min_length=3, max_length=300)
+    use_ai: bool = True  # only used when the fixed rules cannot read the question; falls back silently if no provider is set
 
 
 @router.get("/quality")
@@ -35,7 +36,7 @@ def timelapse(days: int = Query(30, ge=1, le=90), db: Session = Depends(get_db))
 
 @router.post("/ask")
 def ask(body: AskBody, db: Session = Depends(get_db)) -> dict[str, Any]:
-    return insights.ask(db, body.question.strip())
+    return insights.ask(db, body.question.strip(), use_ai=body.use_ai)
 
 
 @router.get("/alerts")

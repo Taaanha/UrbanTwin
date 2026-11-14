@@ -96,3 +96,20 @@ def compare(body: CompareBody, db: Session = Depends(get_db)) -> dict[str, Any]:
     payload = compare_plans(db, body.budget_bdt)
     db.commit()
     return payload
+
+
+@router.post("/compare/brief")
+def compare_brief(body: CompareBody, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Run the same comparison, then have an AI model write a plain-language brief about it. The numbers stay rule-based."""
+    from app.services.ai_briefs import planner_brief
+    from app.services.ai_opinion import ProviderError, ProviderUnavailable
+
+    payload = compare_plans(db, body.budget_bdt)
+    db.commit()
+    try:
+        brief = planner_brief(payload)
+    except ProviderUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"brief": brief, "comparison": payload}

@@ -105,3 +105,20 @@ def graph(db: Session = Depends(get_db)) -> dict[str, Any]:
 @router.get("/geojson")
 def geojson(db: Session = Depends(get_db)) -> dict[str, Any]:
     return geojson_payload(db)
+
+
+@router.get("/issues/{public_id}/brief")
+def issue_ai_brief(public_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """AI-written summary of one issue's spatial links. Correlation only, never a cause."""
+    from app.services.ai_briefs import issue_brief as write_brief
+    from app.services.ai_opinion import ProviderError, ProviderUnavailable
+
+    issue = db.scalar(select(Issue).where(Issue.public_id == public_id))
+    if issue is None:
+        raise HTTPException(status_code=404, detail="Issue not found.")
+    try:
+        return {"brief": write_brief(snapshot_for(db, issue))}
+    except ProviderUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

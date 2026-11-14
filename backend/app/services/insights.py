@@ -1,7 +1,9 @@
 """Data-quality summary, report time-lapse and the rule-based "ask the city" box.
 
-Nothing here calls an external AI. "Ask the city" maps a question onto a small set of fixed,
-parameterised SQL templates, so the answer always comes with the exact query that produced it.
+"Ask the city" maps a question onto a small set of fixed, parameterised SQL templates, so the answer
+always comes with the exact query that produced it. Rules read the question first; when they cannot
+(and use_ai is on) an AI model only fills in the template's intent and filters from a fixed vocabulary.
+The model never writes SQL and never sees the data.
 """
 
 from __future__ import annotations
@@ -279,25 +281,90 @@ def _run(db: Session, sql: str, params: dict[str, Any]):
     return columns, rows
 
 
-def ask(db: Session, question: str) -> dict[str, Any]:
+INTENTS = ("top_wards", "top_categories", "issues_by_status", "oldest_open", "latest", "count")
+
+
+def _rule_intent(q: str) -> str | None:
+    if "ward" in q and any(w in q for w in ("most", "highest", "top", "worst", "more")):
+        return "top_wards"
+    if any(w in q for w in ("most common", "common problem", "common category", "what kind", "what type", "which category")):
+        return "top_categories"
+    if "verified issue" in q or ("issue" in q and "open" in q) or "how many issues" in q:
+        return "issues_by_status"
+    if "oldest" in q or "longest" in q or "waiting" in q:
+        return "oldest_open"
+    if any(w in q for w in ("latest", "newest", "recent", "show")):
+        return "latest"
+    if any(w in q for w in ("how many", "count", "number of", "total")):
+        return "count"
+    return None
+
+
+def ai_parse(question: str) -> dict[str, Any]:
+    """Ask the model to pick a template and filters. Returns validated fields only, plus provider info; raises on failure."""
+    from app.services import ai_text
+
+    prompt = (
+        "Turn the officer's question about citizen reports into a query plan. Return JSON with keys: "
+        f"intent (one of {list(INTENTS)}, or null if none fits), "
+        f"categories (list, each one of {sorted(CATEGORIES)}), severities (list, each one of {list(SEVERITIES)}), "
+        "unresolved (true/false), days (integer 1-365 or null). "
+        "intent meanings: top_wards = which wards have the most reports; top_categories = most common problem types; "
+        "issues_by_status = verified issues by status; oldest_open = oldest waiting reports; latest = most recent reports; "
+        "count = how many reports match. The question may be in English or Bangla. Do not invent filters the question does not imply.\n"
+        f"QUESTION: {ai_text.clean_text(question, 300)}"
+    )
+    raw, meta = ai_text.ask_json(prompt)
+    days = raw.get("days")
+    cats, sevs = raw.get("categories"), raw.get("severities")
+    return {
+        "intent": raw.get("intent") if raw.get("intent") in INTENTS else None,
+        "categories": [c for c in cats if c in CATEGORIES] if isinstance(cats, list) else [],
+        "severities": [x for x in sevs if x in SEVERITIES] if isinstance(sevs, list) else [],
+        "unresolved": raw.get("unresolved") is True,
+        "days": min(days, 365) if isinstance(days, int) and not isinstance(days, bool) and days >= 1 else None,
+        "meta": meta,
+    }
+
+
+def ask(db: Session, question: str, use_ai: bool = False) -> dict[str, Any]:
     q = " ".join(question.lower().split())
     categories, severities, days = _detect_categories(q), _detect_severities(q), _detect_days(q)
     unresolved = any(w in q for w in UNRESOLVED_WORDS)
+    intent = _rule_intent(q)
     caveats = [
         "Counts include demonstration records when present.",
         "Reports are citizen submissions, not verified issues.",
     ]
+    parsed_by: dict[str, Any] = {"method": "rules"}
+    if intent is None and use_ai:
+        try:
+            plan = ai_parse(question)
+        except Exception as exc:  # nothing configured, upstream failure or bad output: fall back to "did not guess"
+            parsed_by = {"method": "rules", "ai_note": f"AI parsing unavailable: {str(exc)[:200]}"}
+        else:
+            if plan["intent"]:
+                intent, categories, severities, unresolved, days = (
+                    plan["intent"], plan["categories"], plan["severities"], plan["unresolved"], plan["days"],
+                )
+                parsed_by = {"method": "ai", **plan["meta"]}
+                caveats.append(
+                    "An AI model read the question and chose the filters shown above. The answer itself comes from the fixed query below, so check the filters."
+                )
+            else:
+                parsed_by = {"method": "rules", "ai_note": "The AI model also found no matching question template."}
     base = {
         "question": question,
         "filters": {"categories": categories, "severities": severities, "unresolved": unresolved, "days": days},
         "caveats": caveats,
+        "parsed_by": parsed_by,
     }
 
     where, params = _filters(categories, severities, unresolved, days)
     where_sql = (" AND " + " AND ".join(where)) if where else ""
     subject = _describe(categories, severities, unresolved, days)
 
-    if "ward" in q and any(w in q for w in ("most", "highest", "top", "worst", "more")):
+    if intent == "top_wards":
         sql = (
             "SELECT w.name AS ward, count(r.id) AS reports\n"
             "FROM wards w JOIN reports r ON ST_Contains(w.geom, r.geom)\n"
@@ -311,7 +378,7 @@ def ask(db: Session, question: str) -> dict[str, Any]:
         )
         return {**base, "understood": True, "intent": "top_wards", "answer": answer, "sql": sql, "params": params, "columns": columns, "rows": rows}
 
-    if any(w in q for w in ("most common", "common problem", "common category", "what kind", "what type", "which category")):
+    if intent == "top_categories":
         sql = (
             "SELECT r.category AS category, count(*) AS reports\n"
             f"FROM reports r WHERE true{where_sql}\n"
@@ -325,7 +392,7 @@ def ask(db: Session, question: str) -> dict[str, Any]:
         )
         return {**base, "understood": True, "intent": "top_categories", "answer": answer, "sql": sql, "params": params, "columns": columns, "rows": rows}
 
-    if "verified issue" in q or ("issue" in q and "open" in q) or "how many issues" in q:
+    if intent == "issues_by_status":
         sql = "SELECT i.status AS status, count(*) AS issues FROM issues i GROUP BY i.status ORDER BY issues DESC"
         columns, rows = _run(db, sql, {})
         open_n = sum(r["issues"] for r in rows if r["status"] == "open")
@@ -333,7 +400,7 @@ def ask(db: Session, question: str) -> dict[str, Any]:
         caveats.append("An issue is a human-verified problem record; its status is set by staff.")
         return {**base, "understood": True, "intent": "issues_by_status", "answer": f"{open_n} of {total} verified issues are open.", "sql": sql, "params": {}, "columns": columns, "rows": rows}
 
-    if "oldest" in q or "longest" in q or "waiting" in q:
+    if intent == "oldest_open":
         clauses = list(where)
         p = dict(params)
         if not unresolved:
@@ -348,7 +415,7 @@ def ask(db: Session, question: str) -> dict[str, Any]:
         answer = f"The oldest unresolved report is {rows[0]['tracking_id']} (received {rows[0]['created_at'][:10]})." if rows else "No unresolved reports."
         return {**base, "understood": True, "intent": "oldest_open", "answer": answer, "sql": sql, "params": p, "columns": columns, "rows": rows}
 
-    if any(w in q for w in ("latest", "newest", "recent", "show")):
+    if intent == "latest":
         sql = (
             "SELECT r.tracking_id, r.category, r.severity, r.status, r.created_at\n"
             f"FROM reports r WHERE true{where_sql}\n"
@@ -358,7 +425,7 @@ def ask(db: Session, question: str) -> dict[str, Any]:
         answer = f"Showing the {len(rows)} most recent {subject}." if rows else f"There are no {subject}."
         return {**base, "understood": True, "intent": "latest", "answer": answer, "sql": sql, "params": params, "columns": columns, "rows": rows}
 
-    if any(w in q for w in ("how many", "count", "number of", "total")):
+    if intent == "count":
         sql = f"SELECT count(*) AS reports FROM reports r WHERE true{where_sql}"
         columns, rows = _run(db, sql, params)
         return {**base, "understood": True, "intent": "count", "answer": f"{rows[0]['reports']} {subject}.", "sql": sql, "params": params, "columns": columns, "rows": rows}
