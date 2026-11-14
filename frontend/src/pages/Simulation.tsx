@@ -6,6 +6,7 @@ import { set3D } from "../map3d";
 import { applyFlood, applyGreen, initScenarioLayers, syncCameras, type FC, type FloodResult } from "../scenarioMap";
 import { HBars, MapToolbar, Notice, Panel, wardLabel } from "../ui";
 import { CandidateBadge, CompareHandle, RangeBar } from "../widgets";
+import { NetworkLab, Sources } from "../networkLab";
 
 type WardRow = {
   ward_id: number;
@@ -69,7 +70,7 @@ type FloodStatus = {
 const input = "rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs";
 const btn = "rounded bg-sky-700 px-3 py-1 text-xs text-white disabled:opacity-50";
 const pct = (v: number | null | undefined) => (v == null ? "–" : `${v}%`);
-type Tab = "green" | "flood" | "budget";
+type Tab = "green" | "flood" | "budget" | "roads" | "drainage";
 
 export default function Simulation() {
   const [tab, setTab] = useState<Tab>("green");
@@ -105,7 +106,7 @@ export default function Simulation() {
   const [floodBusy, setFloodBusy] = useState(false);
   const [floodError, setFloodError] = useState("");
 
-  const showMap = tab !== "budget";
+  const showMap = tab === "green" || tab === "flood";
   const haveScenario = tab === "flood" ? Boolean(flood) : Boolean(active);
   const comparing = compare && haveScenario;
   const baseline5 = floodStatus?.available ? (floodStatus.ground_p5_m ?? null) : null;
@@ -297,11 +298,14 @@ export default function Simulation() {
   return (
     <div className="flex h-full flex-col text-xs">
       <div className="flex flex-wrap gap-2 border-b border-slate-800 px-4 py-2">
-        {tabBtn("green", "Green space & accessibility")}
-        {tabBtn("flood", "Flood what-if (3D)")}
-        {tabBtn("budget", "Repair budget scenarios")}
+        {tabBtn("flood", "Flood simulation (3D)")}
+        {tabBtn("roads", "Road network")}
+        {tabBtn("drainage", "Drainage analysis")}
+        {tabBtn("budget", "Repair planning")}
+        {tabBtn("green", "Green city planning")}
         {error ? <span className="ml-3 self-center text-amber-300">{error}</span> : null}
       </div>
+      <Sources id={tab} />
 
       {showMap ? (
         <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[420px_1fr]">
@@ -503,6 +507,7 @@ export default function Simulation() {
                         ))}
                       </ul>
                       <p className="mt-1">Source: {flood.source}. Downloaded {flood.fetched_at.slice(0, 10)}.</p>
+                      {flood.attribution ? <p className="mt-1 text-slate-500">{flood.attribution}</p> : null}
                     </details>
                   </Panel>
                 ) : null}
@@ -571,6 +576,8 @@ export default function Simulation() {
             ) : null}
           </div>
         </div>
+      ) : tab === "roads" || tab === "drainage" ? (
+        <NetworkLab key={tab} mode={tab} />
       ) : (
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
           <form onSubmit={runBudgets} className="flex flex-wrap items-end gap-3">

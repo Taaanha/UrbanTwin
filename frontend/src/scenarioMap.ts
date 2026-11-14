@@ -9,6 +9,7 @@ export type FloodResult = {
   level_m: number;
   connected_only: boolean;
   source: string;
+  attribution?: string | null;
   fetched_at: string;
   vertical_error_assumed_m: number;
   disclaimer: string;

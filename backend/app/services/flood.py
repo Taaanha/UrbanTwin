@@ -109,7 +109,22 @@ def load_dem(path: Path | None = None) -> dict[str, Any]:
         }
 
 
-def fetch_dem(path: Path | None = None, timeout: float = 20.0) -> dict[str, Any]:
+def fetch_dem(path: Path | None = None, timeout: float = 20.0, prefer: str = "copernicus") -> dict[str, Any]:
+    """Download elevation for the study window and cache it. Copernicus GLO-30 first (decimal precision); Terrarium if that fails."""
+    if prefer == "copernicus":
+        from app.services import copernicus
+
+        try:
+            elev, px0, py0 = copernicus.fetch(padded_bbox(), ZOOM, _world_px, _px_lonlat, timeout=max(timeout, 30.0))
+        except (copernicus.CopernicusError, ValueError, OSError):
+            pass  # fall back to the older source below rather than leave the page without elevation
+        else:
+            save_dem(elev, px0, py0, source=copernicus.SOURCE, path=path)
+            return load_dem(path)
+    return fetch_terrarium(path, timeout)
+
+
+def fetch_terrarium(path: Path | None = None, timeout: float = 20.0) -> dict[str, Any]:
     """Download the Terrarium tiles that cover the study window and cache them as one array."""
     import requests
     from PIL import Image
@@ -158,8 +173,17 @@ def status(path: Path | None = None) -> dict[str, Any]:
         "ground_p95_m": round(float(np.percentile(elev, 95)), 1),
         "baseline_note": "Rise is measured from the 5th-percentile height of this window (the typical low-lying ground in this surface model), not from sea level.",
         "vertical_error_assumed_m": DEM_VERTICAL_ERROR_M,
+        "attribution": attribution_for(dem["source"]),
         "limits": LIMITS,
     }
+
+
+def attribution_for(source: str) -> str | None:
+    if "Copernicus" in source:
+        from app.services import copernicus
+
+        return copernicus.ATTRIBUTION
+    return None
 
 
 # --------------------------------------------------------------- the what-if
@@ -290,6 +314,7 @@ def run(db: Session, level_m: float, connected_only: bool = True, path: Path | N
         "level_m": level_m,
         "connected_only": connected_only,
         "source": dem["source"],
+        "attribution": attribution_for(dem["source"]),
         "fetched_at": dem["fetched_at"],
         "vertical_error_assumed_m": err,
         "disclaimer": "Water-level what-if on a coarse elevation model. Not a flood forecast and not a measured flood extent.",

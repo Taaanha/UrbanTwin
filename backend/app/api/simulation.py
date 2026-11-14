@@ -176,3 +176,29 @@ def flood_what_if(level_m: float, connected_only: bool = True, db: Session = Dep
         raise HTTPException(status_code=409, detail=f"{exc} Download the elevation data first.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/roads")
+def road_exposure(level_m: float, connected_only: bool = False, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Road length at or below a water level in the elevation model (screening, not a forecast)."""
+    from app.services import network
+
+    try:
+        return network.road_exposure(db, level_m, connected_only)
+    except flood.DemUnavailable as exc:
+        raise HTTPException(status_code=409, detail=f"{exc} Download the elevation data first.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/drainage/ponding")
+def drainage_ponding(min_depth_m: float = 1.0, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Where rain would collect in the elevation model if it could only leave through the window edge."""
+    from app.services import network
+
+    try:
+        return network.ponding(db, min_depth_m)
+    except flood.DemUnavailable as exc:
+        raise HTTPException(status_code=409, detail=f"{exc} Download the elevation data first.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
