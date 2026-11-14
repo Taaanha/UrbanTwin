@@ -327,11 +327,16 @@ def ai_parse(question: str) -> dict[str, Any]:
     }
 
 
-def ask(db: Session, question: str, use_ai: bool = False) -> dict[str, Any]:
+def ask(db: Session, question: str, use_ai: bool = False, plan: dict[str, Any] | None = None) -> dict[str, Any]:
+    """plan (used by the advisor's tools) supplies already-validated intent and filters, skipping keyword reading."""
     q = " ".join(question.lower().split())
     categories, severities, days = _detect_categories(q), _detect_severities(q), _detect_days(q)
     unresolved = any(w in q for w in UNRESOLVED_WORDS)
     intent = _rule_intent(q)
+    if plan is not None:
+        intent, categories, severities, unresolved, days = (
+            plan["intent"], plan["categories"], plan["severities"], plan["unresolved"], plan["days"],
+        )
     caveats = [
         "Counts include demonstration records when present.",
         "Reports are citizen submissions, not verified issues.",

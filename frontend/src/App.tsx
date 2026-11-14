@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./layout";
 import Accountability from "./pages/Accountability";
+import Advisor from "./pages/Advisor";
 import Admin from "./pages/Admin";
 import CitizenReport from "./pages/CitizenReport";
 import Dashboard from "./pages/Dashboard";
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/accountability/:publicId" element={<Accountability />} />
           <Route path="/observatory" element={<Observatory />} />
           <Route path="/simulation" element={<Simulation />} />
+          <Route path="/advisor" element={<Advisor />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

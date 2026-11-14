@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.accountability import router as accountability_router
+from app.api.advisor import router as advisor_router
 from app.api.geo import router as geo_router
 from app.api.insights import router as insights_router
 from app.api.intelligence import router as intelligence_router
@@ -52,6 +53,7 @@ app.include_router(accountability_router)
 app.include_router(overview_router)
 app.include_router(simulation_router)
 app.include_router(insights_router)
+app.include_router(advisor_router)
 
 
 @app.get("/api/health")
