@@ -15,14 +15,16 @@ def test_bundled_register_imports_cleanly_and_is_not_plotted():
     first = client.post("/api/flood-evidence/import")
     assert first.status_code == 200
     body = first.json()
-    assert body["added"] == 10 and body["updated"] == 0 and body["skipped_or_adjusted"] == 0
+    assert body["added"] == 28 and body["updated"] == 0 and body["skipped_or_adjusted"] == 0
     again = client.post("/api/flood-evidence/import").json()
-    assert again["added"] == 0 and again["updated"] == 10  # idempotent by record_id
+    assert again["added"] == 0 and again["updated"] == 28  # idempotent by record_id
     reg = client.get("/api/flood-evidence").json()
-    assert reg["total"] == 10 and reg["with_coordinates"] == 0 and reg["plottable_events"] == 0
+    assert reg["total"] == 28 and reg["with_coordinates"] == 0 and reg["plottable_events"] == 0
     assert "nothing here can be used as a located flood observation" in reg["summary_note"]
     groups = {g["group"]: g for g in reg["groups"]}
-    assert [i["record_id"] for i in groups["reported_event"]["items"]] == ["NW001", "NW002"]
+    reported = [i["record_id"] for i in groups["reported_event"]["items"]]
+    assert reported[:2] == ["NW001", "NW002"] and "NW011" in reported and "NW027" in reported and len(reported) == 19
+    assert groups["survey_map"]["items"][0]["record_id"] == "NW028"
     assert groups["modelled_source"]["items"][0]["record_id"] == "NW007"
     assert groups["monitoring"]["items"][0]["record_id"] == "NW010"
     assert any("Modelled inundation stays separate" in r for r in reg["rules"])

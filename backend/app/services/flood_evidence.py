@@ -17,7 +17,12 @@ from sqlalchemy.orm import Session
 
 from app.models.flood_evidence import FloodEvidence
 
-BUNDLED_CSV = Path(__file__).resolve().parents[3] / "datasets" / "flood_evidence" / "noakhali_flood_evidence_2026-11.csv"
+BUNDLED_DIR = Path(__file__).resolve().parents[3] / "datasets" / "flood_evidence"
+
+
+def bundled_files() -> list[Path]:
+    return sorted(BUNDLED_DIR.glob("*.csv"))
+
 MAX_BYTES = 512_000
 COLUMNS = (
     "record_id", "record_type", "event_date", "publication_date", "location", "district", "description",
@@ -34,6 +39,7 @@ GROUPS: dict[str, tuple[str, str]] = {
     "historical_inundation_dataset": ("historical_source", "Historical dataset to obtain"),
     "modelled_inundation_source": ("modelled_source", "Modelled flood map (not observed)"),
     "monitoring_status": ("monitoring", "Monitoring result"),
+    "field_survey_map": ("survey_map", "Field-survey map (to digitize)"),
 }
 GROUP_TITLES = {
     "reported_event": ("Reported events", "News reports. Reported, not measured: no flood extent or depth."),
@@ -41,6 +47,7 @@ GROUP_TITLES = {
     "observed_source": ("Satellite sources (observed, download needed)", "These point at imagery or flood-extent products. The GIS files are not loaded here yet."),
     "historical_source": ("Historical baselines", "Long-term datasets. They do not establish a recent incident."),
     "modelled_source": ("Modelled inundation sources", "Model output, kept separate from observed flooding."),
+    "survey_map": ("Field-survey maps (digitization needed)", "Surveyed locations exist on these maps but are not digitized yet, so nothing is plotted from them."),
     "monitoring": ("Monitoring results", "A search finding, not a physical observation. No report is not proof of no flood."),
     "other": ("Other records", "Unrecognised record type."),
 }
