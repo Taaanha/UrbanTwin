@@ -6,6 +6,7 @@ import CitizenReport from "./pages/CitizenReport";
 import Dashboard from "./pages/Dashboard";
 import Intelligence from "./pages/Intelligence";
 import Investigator from "./pages/Investigator";
+import Observatory from "./pages/Observatory";
 import Overview from "./pages/Overview";
 import Planner from "./pages/Planner";
 import Simulation from "./pages/Simulation";
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/planner" element={<Planner />} />
           <Route path="/accountability" element={<Accountability />} />
           <Route path="/accountability/:publicId" element={<Accountability />} />
+          <Route path="/observatory" element={<Observatory />} />
           <Route path="/simulation" element={<Simulation />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />

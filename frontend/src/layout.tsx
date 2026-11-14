@@ -17,6 +17,7 @@ const MODULE_LINKS: NavItem[] = [
   { to: "/intelligence", label: "City Intelligence", icon: "brain", step: 3 },
   { to: "/planner", label: "City Planner", icon: "wrench", step: 4 },
   { to: "/accountability", label: "Accountability", icon: "shield", step: 5 },
+  { to: "/observatory", label: "Infrastructure Observatory", icon: "flame" },
   { to: "/simulation", label: "City Simulation", icon: "flask", step: 6 },
 ];
 const SYSTEM_LINKS: NavItem[] = [{ to: "/admin", label: "Data & audit", icon: "database" }];
