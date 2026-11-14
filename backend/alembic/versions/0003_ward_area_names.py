@@ -7,6 +7,7 @@ Revision ID: 0003
 Revises: 0002
 """
 
+import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import text
 
@@ -19,6 +20,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # The area-name labels are longer than the original 128-character column.
+    op.alter_column("wards", "name", type_=sa.String(256), existing_type=sa.String(128), existing_nullable=False)
     conn = op.get_bind()
     for number in range(1, 10):
         conn.execute(
@@ -34,3 +37,5 @@ def downgrade() -> None:
             text("UPDATE wards SET name = :old WHERE ward_number = :n AND name = :new"),
             {"new": ward_display_name(number), "n": number, "old": f"Ward {number} (demonstration grid)"},
         )
+    # Names are short again here, so the column can go back to its original width.
+    op.alter_column("wards", "name", type_=sa.String(128), existing_type=sa.String(256), existing_nullable=False)

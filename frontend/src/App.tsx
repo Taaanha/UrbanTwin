@@ -6,6 +6,7 @@ import Advisor from "./pages/Advisor";
 import Admin from "./pages/Admin";
 import CitizenReport from "./pages/CitizenReport";
 import Dashboard from "./pages/Dashboard";
+import FloodEvidence from "./pages/FloodEvidence";
 import Intelligence from "./pages/Intelligence";
 import Investigator from "./pages/Investigator";
 import Observatory from "./pages/Observatory";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/observatory" element={<Observatory />} />
           <Route path="/simulation" element={<Simulation />} />
           <Route path="/advisor" element={<Advisor />} />
+          <Route path="/flood-evidence" element={<FloodEvidence />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

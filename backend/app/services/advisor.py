@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.models.investigator import Issue
 from app.report_constants import CATEGORIES, SEVERITIES
-from app.services import ai_text, flood, insights, intelligence, planner, simulation
+from app.services import ai_text, flood, flood_evidence, insights, intelligence, planner, simulation
 from app.services.ai_opinion import ProviderError, ProviderUnavailable
 
 MAX_STEPS = 6
@@ -86,6 +86,11 @@ TOOLS: list[dict[str, Any]] = [
         "name": "flood_what_if",
         "description": "If water stood at level_m metres in the elevation model (rise is measured from low-lying ground), how many buildings and how much area are below it. Not a forecast; carries a low/central/high range.",
         "parameters": {"type": "object", "properties": {"level_m": {"type": "number", "description": "Water level in metres, -5 to 30."}}, "required": ["level_m"]},
+    },
+    {
+        "name": "flood_evidence_register",
+        "description": "The catalogue of collected flood evidence: reported waterlogging, weather warnings, satellite and modelled data sources still to obtain, and monitoring results, with what each can and cannot show. Use it to say what flood evidence exists for Noakhali.",
+        "parameters": {"type": "object", "properties": {}},
     },
     {
         "name": "green_space_access",
@@ -182,7 +187,20 @@ def _t_green(db: Session, args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _t_flood_evidence(db: Session, args: dict[str, Any]) -> dict[str, Any]:
+    reg = flood_evidence.register(db)
+    slim = ("record_id", "label", "event_date", "location", "description", "source_name", "coordinate_status", "verification_status", "notes")
+    return {
+        "rules": reg["rules"],
+        "total": reg["total"],
+        "with_coordinates": reg["with_coordinates"],
+        "summary_note": reg["summary_note"],
+        "groups": [{"title": g["title"], "note": g["note"], "records": [{k: i[k] for k in slim} for i in g["items"]]} for g in reg["groups"]],
+    }
+
+
 IMPLEMENTATIONS = {
+    "flood_evidence_register": _t_flood_evidence,
     "data_quality": _t_data_quality,
     "query_reports": _t_query_reports,
     "list_verified_issues": _t_list_issues,

@@ -1,5 +1,6 @@
 from app.models.accountability import Inspection, Project, ProjectEvidence, ProjectUpdate
 from app.models.audit import AuditLog
+from app.models.flood_evidence import FloodEvidence
 from app.models.geo import (
     AdminBoundary,
     Building,
@@ -29,6 +30,7 @@ __all__ = [
     "DataSource",
     "Drain",
     "EvidenceFile",
+    "FloodEvidence",
     "Issue",
     "IssueAsset",
     "IssueRelation",

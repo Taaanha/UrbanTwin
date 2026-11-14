@@ -48,7 +48,7 @@ class Ward(Base):
     __tablename__ = "wards"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
     ward_number: Mapped[int] = mapped_column(Integer, nullable=False)
     geom = mapped_column(Geometry(geometry_type="POLYGON", srid=4326), nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
